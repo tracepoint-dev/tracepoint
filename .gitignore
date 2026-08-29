@@ -36,3 +36,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# spike: downloaded test payloads
+spike/**/tracepoint-spike-*.json

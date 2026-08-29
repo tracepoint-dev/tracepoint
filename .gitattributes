@@ -1,0 +1,11 @@
+# Normalise line endings across platforms
+* text=auto eol=lf
+
+# Binary assets — never normalise
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
