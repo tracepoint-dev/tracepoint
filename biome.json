@@ -31,6 +31,17 @@
       "recommended": true
     }
   },
+  "overrides": [
+    {
+      "include": ["**/test/**", "**/*.test.ts", "**/*.test.tsx", "e2e/**", "vitest.setup.ts"],
+      "linter": {
+        "rules": {
+          "style": { "noNonNullAssertion": "off" },
+          "suspicious": { "noExplicitAny": "off" }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
