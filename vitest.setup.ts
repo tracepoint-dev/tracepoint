@@ -2,6 +2,14 @@
  * Test-only environment shims. Real browsers provide these; jsdom does not always.
  */
 
+// jsdom throws on `<canvas>.getContext()` without the native `canvas` package.
+// Return null instead so canvas code can feature-detect. Real rendering is
+// exercised in Playwright, not here.
+if (typeof HTMLCanvasElement !== "undefined") {
+  HTMLCanvasElement.prototype.getContext = (() =>
+    null) as typeof HTMLCanvasElement.prototype.getContext;
+}
+
 // jsdom (as run under Vitest) is missing the `CSS` namespace object. `@medv/finder`
 // calls `CSS.escape()`, so provide the canonical polyfill.
 type CssShim = { escape: (value: string) => string };
