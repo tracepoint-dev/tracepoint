@@ -10,7 +10,7 @@ const page: CSSProperties = {
   padding: 32,
 };
 
-const HOOK = `${location.origin}/__tp_hook`;
+const HOOK = `${location.origin}/__tp/ingest`;
 
 /** Default demo: the `<Tracepoint>` adapter with the built-in UI. */
 function DefaultDemo() {

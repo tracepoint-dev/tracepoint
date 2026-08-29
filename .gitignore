@@ -46,3 +46,6 @@ spike/**/tracepoint-spike-*.json
 /AGENTS.md
 /docs/
 /spike/
+
+# demo receiver data
+examples/demo-app/.tracepoint/

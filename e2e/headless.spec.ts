@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("headless: custom UI drives pick → screenshot → send", async ({ page }) => {
-  await page.route("**/__tp_hook", (route) => route.fulfill({ status: 200, body: "ok" }));
-
+test("headless: custom UI drives pick → screenshot → send, lands in the dashboard", async ({
+  page,
+}) => {
   await page.goto("/?headless");
 
   // headless mounts no built-in UI at all
@@ -10,15 +10,13 @@ test("headless: custom UI drives pick → screenshot → send", async ({ page })
 
   await page.getByTestId("headless-report").click();
   await expect(page.getByTestId("headless-status")).toHaveText("picking");
-
   await page.getByTestId("sample-action").click();
 
-  const [request] = await Promise.all([
-    page.waitForRequest("**/__tp_hook"),
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/__tp/ingest") && r.status() === 201),
     expect(page.getByTestId("headless-status")).toHaveText("sent"),
   ]);
 
-  const body = request.postDataJSON();
-  expect(body.report.description).toBe("headless report");
-  expect(body.target.tag).toBe("button");
+  await page.goto("/__tp");
+  await expect(page.getByRole("link", { name: "headless report" })).toBeVisible();
 });

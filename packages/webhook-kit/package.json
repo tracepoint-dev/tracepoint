@@ -29,6 +29,11 @@
       "types": "./dist/express.d.ts",
       "import": "./dist/express.js",
       "require": "./dist/express.cjs"
+    },
+    "./node": {
+      "types": "./dist/node-http.d.ts",
+      "import": "./dist/node-http.js",
+      "require": "./dist/node-http.cjs"
     }
   },
   "files": ["dist"],

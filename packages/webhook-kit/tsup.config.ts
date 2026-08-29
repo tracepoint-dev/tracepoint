@@ -7,6 +7,7 @@ export default defineConfig({
     "src/connectors/index.ts",
     "src/dashboard/index.ts",
     "src/express.ts",
+    "src/node-http.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,
