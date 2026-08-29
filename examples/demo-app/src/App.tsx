@@ -1,5 +1,6 @@
-import { type TracepointHandle, VERSION, tracepoint } from "@tracepoint-dev/core";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { VERSION } from "@tracepoint-dev/core";
+import { Tracepoint, useTracepoint } from "@tracepoint-dev/react";
+import { type CSSProperties, useState } from "react";
 
 const page: CSSProperties = {
   fontFamily: "system-ui, -apple-system, sans-serif",
@@ -9,17 +10,13 @@ const page: CSSProperties = {
   padding: 32,
 };
 
-const HOOK = () => `${location.origin}/__tp_hook`;
+const HOOK = `${location.origin}/__tp_hook`;
 
-/** Default demo: `tracepoint()` with the built-in UI. */
+/** Default demo: the `<Tracepoint>` adapter with the built-in UI. */
 function DefaultDemo() {
-  useEffect(() => {
-    const tp = tracepoint({ webhook: HOOK(), env: "demo" });
-    return () => tp.destroy();
-  }, []);
-
   return (
     <main style={page}>
+      <Tracepoint webhook={HOOK} env="demo" />
       <h1>Tracepoint demo</h1>
       <p>
         <code>@tracepoint-dev/core</code> version{" "}
@@ -33,28 +30,24 @@ function DefaultDemo() {
   );
 }
 
-/** Headless demo (`?headless`): custom UI driving pick / screenshot / send. */
+/** Headless demo (`?headless`): `<Tracepoint ui={false}>` + a custom trigger via the hook. */
 function HeadlessDemo() {
-  const tp = useRef<TracepointHandle | null>(null);
+  const tp = useTracepoint();
   const [status, setStatus] = useState("idle");
-
-  useEffect(() => {
-    tp.current = tracepoint({ webhook: HOOK(), ui: false });
-    return () => tp.current?.destroy();
-  }, []);
 
   async function report() {
     setStatus("picking");
-    const target = await tp.current?.pick();
+    const target = await tp?.pick();
     setStatus("capturing");
-    const screenshot = await tp.current?.screenshot();
+    const screenshot = await tp?.screenshot();
     setStatus("sending");
-    const res = await tp.current?.send({ description: "headless report", target, screenshot });
+    const res = await tp?.send({ description: "headless report", target, screenshot });
     setStatus(res?.ok ? "sent" : "failed");
   }
 
   return (
     <main style={page}>
+      <Tracepoint webhook={HOOK} ui={false} />
       <h1>Headless demo</h1>
       <button type="button" data-testid="headless-report" onClick={report}>
         Report an issue (custom UI)

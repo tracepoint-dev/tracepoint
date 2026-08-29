@@ -15,6 +15,22 @@ interface Instance {
 }
 
 let current: Instance | null = null;
+const listeners = new Set<() => void>();
+
+function notify(): void {
+  for (const listener of listeners) listener();
+}
+
+/** The active handle, or `null`. For adapter authors (e.g. the React `useTracepoint` hook). */
+export function getInstance(): TracepointHandle | null {
+  return current?.handle ?? null;
+}
+
+/** Subscribe to instance create/destroy. Returns an unsubscribe fn. */
+export function subscribeInstance(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
 
 function configsDiffer(a: NormalizedConfig, b: NormalizedConfig): boolean {
   return (
@@ -55,10 +71,12 @@ export function tracepoint(config: TracepointConfig): TracepointHandle {
     destroy: () => {
       runtime.destroy();
       current = null;
+      notify();
     },
   };
 
   current = { handle, config: normalized };
+  notify();
   return handle;
 }
 
@@ -66,4 +84,5 @@ export function tracepoint(config: TracepointConfig): TracepointHandle {
 export function _resetInstance(): void {
   current?.handle.destroy();
   current = null;
+  notify();
 }
