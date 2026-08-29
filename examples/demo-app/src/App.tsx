@@ -1,6 +1,5 @@
-import { VERSION } from "@tracepoint-dev/core";
-import { Tracepoint, useTracepoint } from "@tracepoint-dev/react";
-import type { CSSProperties } from "react";
+import { VERSION, tracepoint } from "@tracepoint-dev/core";
+import { type CSSProperties, useEffect } from "react";
 
 const page: CSSProperties = {
   fontFamily: "system-ui, -apple-system, sans-serif",
@@ -11,24 +10,26 @@ const page: CSSProperties = {
 };
 
 /**
- * M0 smoke screen. Its only job is to prove the workspace packages resolve and
- * render inside a real Vite + React app. Replaced with a proper demo in M1/M2.
+ * M1 demo: calls `tracepoint()` directly (the React adapter arrives in M2).
+ * Exercised by the Playwright reporter spec.
  */
 export function App() {
-  const tp = useTracepoint();
+  useEffect(() => {
+    const tp = tracepoint({ webhook: `${location.origin}/__tp_hook`, env: "demo" });
+    return () => tp.destroy();
+  }, []);
 
   return (
     <main style={page}>
       <h1>Tracepoint demo</h1>
       <p>
-        Workspace wiring check. <code>@tracepoint-dev/core</code> version:{" "}
+        <code>@tracepoint-dev/core</code> version{" "}
         <strong data-testid="core-version">{VERSION}</strong>
       </p>
-      <p>
-        <code>useTracepoint()</code> →{" "}
-        <strong data-testid="handle-state">{tp ? "handle" : "null (stub)"}</strong>
-      </p>
-      <Tracepoint webhook="https://example.test/hook" env="demo" />
+      <button type="button" data-testid="sample-action">
+        Create project
+      </button>
+      <p>Nothing happens when you click — that is the “bug” to report.</p>
     </main>
   );
 }
