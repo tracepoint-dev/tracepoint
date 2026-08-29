@@ -1,2 +1,1 @@
-// Outbound chain handlers. Filled in P3.6 (discord).
-export {};
+export { discord } from "./discord.js";

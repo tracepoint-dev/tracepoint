@@ -58,6 +58,8 @@ export interface Store {
 
 export interface HandlerCtx {
   logger: { info(message: string): void; error(message: string, err?: unknown): void };
+  /** The screenshot bytes for this report, if any. */
+  readScreenshot(): Promise<{ mimeType: string; bytes: Uint8Array } | null>;
 }
 
 /** An outbound step run after a report is saved. Failures are logged, never rethrown. */

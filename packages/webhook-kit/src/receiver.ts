@@ -33,9 +33,13 @@ export function createReceiver(opts: ReceiverOptions): Receiver {
   }
 
   async function runChain(report: StoredReport): Promise<void> {
+    const ctx = {
+      logger,
+      readScreenshot: () => opts.store.readScreenshot(report.id),
+    };
     for (const handler of chain) {
       try {
-        await handler(report, { logger });
+        await handler(report, ctx);
       } catch (err) {
         logger.error(`chain handler failed for report ${report.id}`, err);
       }
