@@ -30,13 +30,8 @@ pnpm dev:demo      # run the demo app at http://localhost:3100
 Toolchain: pnpm workspaces · tsup (build) · Vitest (unit) · Playwright (e2e) ·
 Biome (lint/format) · Changesets (versioning). Requires Node ≥ 20 (repo pins 22).
 
-## Repo layout
-
-- [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) — source of truth: decisions, status, build order
-- [`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) — working rules for contributors and AI assistants
-- [`docs/`](./docs) — design docs (kickoff, positioning, Phase 0 spike, Phase 1 plan)
-- `packages/`, `examples/` — the workspace
-- `spike/phase-0/` — throwaway capture spike; not part of the shipped packages
+[`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) hold the working rules for
+contributors and AI assistants.
 
 ## License
 

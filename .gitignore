@@ -39,3 +39,8 @@ Thumbs.db
 
 # spike: downloaded test payloads
 spike/**/tracepoint-spike-*.json
+
+# internal planning — kept local, not published to the repo
+/PROJECT_CONTEXT.md
+/docs/
+/spike/
