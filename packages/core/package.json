@@ -13,11 +13,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./global": "./dist/tracepoint.global.js"
+    "./global": "./dist/tracepoint.global.js",
+    "./schema": "./schema/tracepoint.schema.json"
   },
   "unpkg": "./dist/tracepoint.global.js",
   "jsdelivr": "./dist/tracepoint.global.js",
-  "files": ["dist"],
+  "files": ["dist", "schema"],
   "sideEffects": ["./dist/tracepoint.global.js"],
   "publishConfig": {
     "access": "public"

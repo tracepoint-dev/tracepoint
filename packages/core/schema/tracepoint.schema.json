@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracepoint.dev/schema/1.0/report.json",
+  "title": "Tracepoint report envelope",
+  "description": "The JSON a Tracepoint SDK POSTs to a webhook. schemaVersion 1.0.",
+  "type": "object",
+  "required": ["tracepoint", "id", "createdAt", "report", "page", "client", "context"],
+  "additionalProperties": true,
+  "properties": {
+    "tracepoint": {
+      "type": "object",
+      "required": ["schemaVersion", "sdkVersion"],
+      "properties": {
+        "schemaVersion": { "type": "string", "const": "1.0" },
+        "sdkVersion": { "type": "string" }
+      }
+    },
+    "id": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "report": {
+      "type": "object",
+      "required": ["description", "annotations"],
+      "properties": {
+        "description": { "type": "string" },
+        "annotations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string", "enum": ["selection-rect"] },
+              "rect": { "$ref": "#/$defs/rect" }
+            }
+          }
+        }
+      }
+    },
+    "target": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/descriptor" }]
+    },
+    "page": {
+      "type": "object",
+      "required": ["url", "route", "title", "referrer"],
+      "properties": {
+        "url": { "type": "string" },
+        "route": { "type": ["string", "null"] },
+        "title": { "type": "string" },
+        "referrer": { "type": ["string", "null"] }
+      }
+    },
+    "screenshot": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["mimeType", "dataUrl", "width", "height"],
+          "properties": {
+            "mimeType": { "type": "string" },
+            "dataUrl": { "type": "string", "description": "data: URL, base64" },
+            "width": { "type": "integer" },
+            "height": { "type": "integer" }
+          }
+        }
+      ]
+    },
+    "client": {
+      "type": "object",
+      "required": ["userAgent", "viewport", "screen", "language", "timezone"],
+      "properties": {
+        "userAgent": { "type": "string" },
+        "viewport": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "number" },
+            "height": { "type": "number" },
+            "dpr": { "type": "number" }
+          }
+        },
+        "screen": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "number" },
+            "height": { "type": "number" }
+          }
+        },
+        "language": { "type": "string" },
+        "timezone": { "type": "string" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "App-supplied key/values. Empty in schemaVersion 1.0 unless set.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "rect": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      }
+    },
+    "descriptor": {
+      "type": "object",
+      "description": "Everything captured about the picked element.",
+      "properties": {
+        "primarySelector": { "type": "string" },
+        "generatedSelector": { "type": "string" },
+        "selectorConfidence": { "type": "string", "enum": ["semantic", "positional"] },
+        "selectorResolves": { "type": "boolean" },
+        "selectorMatchCount": { "type": "integer" },
+        "xpath": { "type": "string" },
+        "testId": { "type": ["string", "null"] },
+        "id": { "type": ["string", "null"] },
+        "tag": { "type": "string" },
+        "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+        "value": { "type": ["string", "null"] },
+        "text": { "type": "string" },
+        "ariaRole": { "type": ["string", "null"] },
+        "accessibleName": { "type": ["string", "null"] },
+        "interactiveAncestor": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "properties": {
+                "selector": { "type": "string" },
+                "tag": { "type": "string" },
+                "role": { "type": ["string", "null"] }
+              }
+            }
+          ]
+        },
+        "boundingRect": { "$ref": "#/$defs/rect" },
+        "ancestors": { "type": "array", "items": { "type": "string" } },
+        "outerHtml": { "type": "string" }
+      }
+    }
+  }
+}

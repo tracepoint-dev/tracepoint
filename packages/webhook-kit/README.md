@@ -35,7 +35,20 @@ Point your SDK's `webhook` at `…/tracepoint/ingest`.
 
 Drivers are optional peer dependencies loaded lazily — install only the one your store uses.
 
+## Connectors
+
+`import { discord } from "@tracepoint-dev/webhook-kit/connectors"` — a chain handler that
+posts each report to a Discord webhook as an embed with the screenshot attached. Add it to
+`handlers`. Slack / AI-summary follow the same `Handler` shape.
+
+## Mounting
+
+- `handleRequest(request)` — framework-agnostic (Web Fetch `Request` → `Response`)
+- `@tracepoint-dev/webhook-kit/express` → `mount(receiver)` middleware
+- `@tracepoint-dev/webhook-kit/node` → `nodeHandler(receiver)` for raw `http`, Connect, Vite
+
 ## Status
 
-P3.1 — scaffold: `createReceiver` (ingest → store, outbound chain, retention). Stores,
-dashboard, and connectors land in P3.2–P3.6 (see `docs/adr/0003-phase-3-webhook-kit.md`).
+Phase 3 complete — receiver, `jsonFileStore` + `sqliteStore`, store-agnostic dashboard
+(list / detail / delete / clear), `discord` connector, Express + node glue. Full
+`SDK → receiver → dashboard` loop covered by Playwright.
