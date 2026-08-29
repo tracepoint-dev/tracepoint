@@ -42,5 +42,7 @@ spike/**/tracepoint-spike-*.json
 
 # internal planning — kept local, not published to the repo
 /PROJECT_CONTEXT.md
+/CLAUDE.md
+/AGENTS.md
 /docs/
 /spike/
