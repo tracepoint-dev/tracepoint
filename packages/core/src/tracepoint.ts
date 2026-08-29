@@ -1,9 +1,9 @@
 /**
- * The `tracepoint()` factory and its singleton guard. The capture pipeline and
- * UI live in `runtime.ts`; this file just validates config and enforces one
- * instance per page.
+ * The `tracepoint()` factory and its singleton guard. Delegates to the built-in
+ * UI runtime or the headless runtime based on `ui: false` (ADR 0002).
  */
 import { normalizeConfig } from "./config.js";
+import { createHeadlessRuntime } from "./headless.js";
 import type { NormalizedConfig } from "./internal-types.js";
 import { createRuntime } from "./runtime.js";
 import type { TracepointConfig, TracepointHandle } from "./types.js";
@@ -21,9 +21,10 @@ function configsDiffer(a: NormalizedConfig, b: NormalizedConfig): boolean {
     a.webhook !== b.webhook ||
     a.env !== b.env ||
     a.release !== b.release ||
-    a.button !== b.button ||
+    a.headless !== b.headless ||
     JSON.stringify(a.redact) !== JSON.stringify(b.redact) ||
-    JSON.stringify(a.context) !== JSON.stringify(b.context)
+    JSON.stringify(a.context) !== JSON.stringify(b.context) ||
+    JSON.stringify(a.ui) !== JSON.stringify(b.ui)
   );
 }
 
@@ -45,11 +46,12 @@ export function tracepoint(config: TracepointConfig): TracepointHandle {
     return current.handle;
   }
 
-  const runtime = createRuntime(normalized);
+  const runtime = normalized.headless
+    ? createHeadlessRuntime(normalized)
+    : createRuntime(normalized);
+
   const handle: TracepointHandle = {
-    open: runtime.open,
-    close: runtime.close,
-    setContext: runtime.setContext,
+    ...runtime,
     destroy: () => {
       runtime.destroy();
       current = null;

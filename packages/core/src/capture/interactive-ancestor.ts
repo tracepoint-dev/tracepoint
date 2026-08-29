@@ -1,4 +1,4 @@
-import type { DescriptorBundle } from "../internal-types.js";
+import type { DescriptorBundle } from "../types.js";
 
 const INTERACTIVE =
   'button, a[href], input, select, textarea, [role="button"], [role="link"], ' +

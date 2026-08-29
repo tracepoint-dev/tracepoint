@@ -1,65 +1,45 @@
 /**
- * Internal shapes — not part of the public API. The public contract is in `types.ts`.
- * The payload shapes here mirror the frozen envelope (PROJECT_CONTEXT.md §10 / ADR 0001).
+ * Internal shapes — not part of the public API. Public shapes live in `types.ts`.
  */
+import type { Annotation, DescriptorBundle, Screenshot } from "./types.js";
 
-/** Config after validation + defaults are applied. Frozen. */
+export type Position = "bottom-right" | "bottom-left" | "top-right" | "top-left";
+export type ColorScheme = "light" | "dark" | "auto";
+
+/** UI config after defaults are filled in. */
+export interface NormalizedUi {
+  position: Position;
+  theme: {
+    accent: string | null;
+    radius: string | null;
+    font: string | null;
+    colorScheme: ColorScheme;
+  };
+  /** `null` = render no button. */
+  button: { icon: string | null; label: string; variant: "pill" | "icon" } | null;
+  trigger: string | null;
+  icons: { close: string | null };
+  labels: {
+    title: string;
+    placeholder: string;
+    submit: string;
+    cancel: string;
+    retry: string;
+    close: string;
+    success: string;
+  };
+}
+
+/** Config after validation + defaults. Frozen. */
 export interface NormalizedConfig {
-  /** `null` means no webhook was given — the console transport is used. */
   webhook: string | null;
   env: string | null;
   release: string | null;
   context: Record<string, unknown>;
-  button: boolean;
   redact: string[];
-}
-
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface SelectionRectAnnotation {
-  type: "selection-rect";
-  rect: Rect;
-}
-
-export type Annotation = SelectionRectAnnotation;
-
-/** Confidence in the generated CSS selector. */
-export type SelectorConfidence = "semantic" | "positional";
-
-/** Everything captured about the picked element. */
-export interface DescriptorBundle {
-  primarySelector: string;
-  generatedSelector: string;
-  selectorConfidence: SelectorConfidence;
-  selectorResolves: boolean;
-  selectorMatchCount: number;
-  xpath: string;
-  testId: string | null;
-  id: string | null;
-  tag: string;
-  attributes: Record<string, string>;
-  /** Form-field value, or `null` for non-fields and sensitive fields. */
-  value: string | null;
-  text: string;
-  ariaRole: string | null;
-  accessibleName: string | null;
-  /** Nearest [role] / button / a / [tabindex] ancestor, if the picked node was a wrapper. */
-  interactiveAncestor: { selector: string; tag: string; role: string | null } | null;
-  boundingRect: Rect;
-  ancestors: string[];
-  outerHtml: string;
-}
-
-export interface Screenshot {
-  mimeType: string;
-  dataUrl: string;
-  width: number;
-  height: number;
+  /** `true` when `ui: false` — no built-in DOM. */
+  headless: boolean;
+  ui: NormalizedUi;
 }
 
 export interface ClientEnv {

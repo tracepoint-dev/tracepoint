@@ -1,19 +1,20 @@
 /**
- * The coordinator: owns the draft, wires the state machine to the pipeline and
- * the UI, and runs each effect the reducer asks for (ADR 0001).
+ * The built-in-UI coordinator: owns the draft, wires the state machine to the
+ * pipeline and the panel, runs each effect the reducer asks for (ADR 0001).
+ * The handle also exposes the headless primitives (pick / screenshot / send).
  */
 import { drawSelectionRect } from "./annotate/selection-rect.js";
 import { buildDescriptor } from "./capture/descriptor.js";
+import { pickOnce } from "./capture/pick-once.js";
 import { createPicker } from "./capture/picker.js";
 import type { Draft, NormalizedConfig } from "./internal-types.js";
 import { assemblePayload } from "./payload/assemble.js";
+import { pickTransport, runScreenshot, runSend } from "./pipeline.js";
 import { withRedaction } from "./privacy/redact.js";
 import { captureScreenshot } from "./screenshot/capture.js";
 import { createMachine } from "./state/machine.js";
 import type { Effect } from "./state/machine.types.js";
-import { createConsoleTransport } from "./transport/console.js";
 import type { Transport } from "./transport/types.js";
-import { createWebhookTransport } from "./transport/webhook.js";
 import type { TracepointHandle } from "./types.js";
 import { createButton, createHint } from "./ui/button.js";
 import { createHighlight } from "./ui/highlight.js";
@@ -29,32 +30,43 @@ const emptyDraft = (): Draft => ({
 
 export function createRuntime(config: NormalizedConfig): TracepointHandle {
   const context: Record<string, unknown> = { ...config.context };
-  const transport: Transport = config.webhook
-    ? createWebhookTransport(config.webhook)
-    : createConsoleTransport();
+  const transport: Transport = pickTransport(config.webhook);
 
   let draft = emptyDraft();
   let capturing = false;
   let lastError: string | null = null;
   let hint: HTMLElement | null = null;
 
-  const shell = mountShell();
+  const shell = mountShell(config.ui);
   const highlight = createHighlight();
   shell.shadow.append(highlight.el);
 
-  const panel = createPanel({
-    onDescription: (text) => {
-      draft.description = text;
+  const panel = createPanel(
+    {
+      onDescription: (text) => {
+        draft.description = text;
+      },
+      onSubmit: () => machine.dispatch({ type: "SUBMIT" }),
+      onCancel: () => machine.dispatch({ type: "CANCEL" }),
+      onRetry: () => machine.dispatch({ type: "RETRY" }),
+      onClose: () => machine.dispatch({ type: "CLOSE" }),
     },
-    onSubmit: () => machine.dispatch({ type: "SUBMIT" }),
-    onCancel: () => machine.dispatch({ type: "CANCEL" }),
-    onRetry: () => machine.dispatch({ type: "RETRY" }),
-    onClose: () => machine.dispatch({ type: "CLOSE" }),
-  });
+    { labels: config.ui.labels, closeIcon: config.ui.icons.close },
+  );
   shell.shadow.append(panel.el);
 
-  if (config.button) {
-    shell.shadow.append(createButton(() => machine.dispatch({ type: "OPEN" })));
+  if (config.ui.button) {
+    shell.shadow.append(createButton(config.ui.button, () => machine.dispatch({ type: "OPEN" })));
+  }
+
+  let unbindTrigger: (() => void) | null = null;
+  if (config.ui.trigger) {
+    const target = document.querySelector(config.ui.trigger);
+    if (target) {
+      const open = () => machine.dispatch({ type: "OPEN" });
+      target.addEventListener("click", open);
+      unbindTrigger = () => target.removeEventListener("click", open);
+    }
   }
 
   const picker = createPicker({
@@ -84,7 +96,7 @@ export function createRuntime(config: NormalizedConfig): TracepointHandle {
     hint = null;
   };
 
-  async function runScreenshot(): Promise<void> {
+  async function doScreenshot(): Promise<void> {
     capturing = true;
     renderPanel();
 
@@ -99,7 +111,7 @@ export function createRuntime(config: NormalizedConfig): TracepointHandle {
     renderPanel();
   }
 
-  async function runSubmit(): Promise<void> {
+  async function doSubmit(): Promise<void> {
     const result = await transport.submit(assemblePayload(draft, context));
     if (result.ok) {
       machine.dispatch({ type: "SUBMIT_OK" });
@@ -124,10 +136,10 @@ export function createRuntime(config: NormalizedConfig): TracepointHandle {
         draft.target = buildDescriptor(effect.element);
         break;
       case "startScreenshot":
-        void runScreenshot();
+        void doScreenshot();
         break;
       case "sendPayload":
-        void runSubmit();
+        void doSubmit();
         break;
       case "resetDraft":
         draft = emptyDraft();
@@ -151,7 +163,11 @@ export function createRuntime(config: NormalizedConfig): TracepointHandle {
     destroy: () => {
       picker.stop();
       hideHint();
+      unbindTrigger?.();
       shell.destroy();
     },
+    pick: () => pickOnce(shell.host, highlight),
+    screenshot: (opts) => runScreenshot(config.redact, opts),
+    send: (input) => runSend(input, context, transport),
   };
 }

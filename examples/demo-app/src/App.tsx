@@ -1,5 +1,5 @@
-import { VERSION, tracepoint } from "@tracepoint-dev/core";
-import { type CSSProperties, useEffect } from "react";
+import { type TracepointHandle, VERSION, tracepoint } from "@tracepoint-dev/core";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 const page: CSSProperties = {
   fontFamily: "system-ui, -apple-system, sans-serif",
@@ -9,13 +9,12 @@ const page: CSSProperties = {
   padding: 32,
 };
 
-/**
- * M1 demo: calls `tracepoint()` directly (the React adapter arrives in M2).
- * Exercised by the Playwright reporter spec.
- */
-export function App() {
+const HOOK = () => `${location.origin}/__tp_hook`;
+
+/** Default demo: `tracepoint()` with the built-in UI. */
+function DefaultDemo() {
   useEffect(() => {
-    const tp = tracepoint({ webhook: `${location.origin}/__tp_hook`, env: "demo" });
+    const tp = tracepoint({ webhook: HOOK(), env: "demo" });
     return () => tp.destroy();
   }, []);
 
@@ -32,4 +31,44 @@ export function App() {
       <p>Nothing happens when you click — that is the “bug” to report.</p>
     </main>
   );
+}
+
+/** Headless demo (`?headless`): custom UI driving pick / screenshot / send. */
+function HeadlessDemo() {
+  const tp = useRef<TracepointHandle | null>(null);
+  const [status, setStatus] = useState("idle");
+
+  useEffect(() => {
+    tp.current = tracepoint({ webhook: HOOK(), ui: false });
+    return () => tp.current?.destroy();
+  }, []);
+
+  async function report() {
+    setStatus("picking");
+    const target = await tp.current?.pick();
+    setStatus("capturing");
+    const screenshot = await tp.current?.screenshot();
+    setStatus("sending");
+    const res = await tp.current?.send({ description: "headless report", target, screenshot });
+    setStatus(res?.ok ? "sent" : "failed");
+  }
+
+  return (
+    <main style={page}>
+      <h1>Headless demo</h1>
+      <button type="button" data-testid="headless-report" onClick={report}>
+        Report an issue (custom UI)
+      </button>
+      <button type="button" data-testid="sample-action">
+        Create project
+      </button>
+      <p data-testid="headless-status">{status}</p>
+    </main>
+  );
+}
+
+export function App() {
+  const headless =
+    typeof location !== "undefined" && new URLSearchParams(location.search).has("headless");
+  return headless ? <HeadlessDemo /> : <DefaultDemo />;
 }

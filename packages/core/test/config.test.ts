@@ -11,11 +11,13 @@ describe("normalizeConfig", () => {
   it("accepts a bare https webhook and fills defaults", () => {
     const c = normalizeConfig({ webhook: "https://example.test/hook" });
     expect(c.webhook).toBe("https://example.test/hook");
-    expect(c.button).toBe(true);
     expect(c.redact).toEqual([]);
     expect(c.context).toEqual({});
     expect(c.env).toBeNull();
     expect(c.release).toBeNull();
+    expect(c.headless).toBe(false);
+    expect(c.ui.position).toBe("bottom-right");
+    expect(c.ui.button?.label).toBe("Report an issue");
   });
 
   it("allows an omitted webhook (console-only mode)", () => {
@@ -32,11 +34,39 @@ describe("normalizeConfig", () => {
     expect(() => normalizeConfig(null)).toThrow(TypeError);
   });
 
-  it("warns and coerces a non-boolean button", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const c = normalizeConfig({ webhook: "https://x.test", button: 0 as unknown as boolean });
-    expect(c.button).toBe(false);
-    expect(warn).toHaveBeenCalledOnce();
+  it("maps `ui: false` to headless and keeps default ui values", () => {
+    const c = normalizeConfig({ webhook: "https://x.test", ui: false });
+    expect(c.headless).toBe(true);
+    expect(c.ui.button?.label).toBe("Report an issue");
+  });
+
+  it("resolves a partial `ui` object", () => {
+    const c = normalizeConfig({
+      webhook: "https://x.test",
+      ui: {
+        position: "top-left",
+        theme: { accent: "#7c3aed", colorScheme: "dark" },
+        button: { label: "Feedback", variant: "icon" },
+        labels: { submit: "Send it" },
+        icons: { close: "<svg/>" },
+        trigger: "#help",
+      },
+    });
+    expect(c.headless).toBe(false);
+    expect(c.ui.position).toBe("top-left");
+    expect(c.ui.theme.accent).toBe("#7c3aed");
+    expect(c.ui.theme.colorScheme).toBe("dark");
+    expect(c.ui.button).toEqual({ icon: null, label: "Feedback", variant: "icon" });
+    expect(c.ui.labels.submit).toBe("Send it");
+    expect(c.ui.labels.cancel).toBe("Cancel"); // untouched default
+    expect(c.ui.icons.close).toBe("<svg/>");
+    expect(c.ui.trigger).toBe("#help");
+  });
+
+  it("`ui: { button: false }` means no button", () => {
+    expect(
+      normalizeConfig({ webhook: "https://x.test", ui: { button: false } }).ui.button,
+    ).toBeNull();
   });
 
   it("warns and ignores a non-object context", () => {

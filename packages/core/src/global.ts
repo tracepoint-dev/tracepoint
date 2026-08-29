@@ -23,6 +23,6 @@ if (webhook) {
   const config: TracepointConfig = { webhook };
   if (script?.dataset.env) config.env = script.dataset.env;
   if (script?.dataset.release) config.release = script.dataset.release;
-  if (script?.dataset.button === "false") config.button = false;
+  if (script?.dataset.button === "false") config.ui = { button: false };
   tracepoint(config);
 }

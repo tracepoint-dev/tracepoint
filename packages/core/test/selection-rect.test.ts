@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { drawSelectionRect } from "../src/annotate/selection-rect.js";
-import type { Screenshot } from "../src/internal-types.js";
+import type { Screenshot } from "../src/types.js";
 
 const shot: Screenshot = {
   mimeType: "image/png",

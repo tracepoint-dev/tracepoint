@@ -4,7 +4,7 @@
  * excluded; capped scale; times out and fails soft (report still sends without it).
  */
 import { ROOT_ID, SCREENSHOT_TIMEOUT_MS } from "../constants.js";
-import type { Screenshot } from "../internal-types.js";
+import type { Screenshot } from "../types.js";
 import { warn } from "../util/logger.js";
 
 type ModernScreenshot = typeof import("modern-screenshot");

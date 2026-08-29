@@ -3,7 +3,7 @@
  * the slow async work is the screenshot, handled elsewhere.
  */
 import { TEST_ID_ATTRS } from "../constants.js";
-import type { DescriptorBundle } from "../internal-types.js";
+import type { DescriptorBundle } from "../types.js";
 import { collectAttributes, safeFieldValue } from "./attributes.js";
 import { accessibleName, findInteractiveAncestor } from "./interactive-ancestor.js";
 import { outerHtmlSnippet } from "./outer-html.js";

@@ -4,6 +4,7 @@
  * Rule (ADR 0001 D3): throw only on a bad `webhook`; warn and coerce/ignore for
  * everything else. A missing `webhook` is allowed — it selects the console transport.
  */
+import { normalizeUi } from "./config-ui.js";
 import type { NormalizedConfig } from "./internal-types.js";
 import type { TracepointConfig } from "./types.js";
 import { warnOnce } from "./util/logger.js";
@@ -13,8 +14,8 @@ const KNOWN_KEYS = new Set<keyof TracepointConfig>([
   "env",
   "release",
   "context",
-  "button",
   "redact",
+  "ui",
 ]);
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -67,29 +68,21 @@ export function normalizeConfig(input: unknown): NormalizedConfig {
   }
   warnUnknownKeys(input);
 
-  let button = true;
-  if (input.button !== undefined) {
-    if (typeof input.button !== "boolean") {
-      warnOnce("config:button", "`button` must be a boolean; coercing.");
-    }
-    button = Boolean(input.button);
-  }
-
   let context: Record<string, unknown> = {};
   if (input.context !== undefined) {
-    if (isPlainObject(input.context)) {
-      context = { ...input.context };
-    } else {
-      warnOnce("config:context", "`context` must be a plain object; ignoring.");
-    }
+    if (isPlainObject(input.context)) context = { ...input.context };
+    else warnOnce("config:context", "`context` must be a plain object; ignoring.");
   }
+
+  const { headless, ui } = normalizeUi(input.ui);
 
   return Object.freeze({
     webhook: normalizeWebhook(input.webhook),
     env: normalizeString(input.env, "env"),
     release: normalizeString(input.release, "release"),
     context,
-    button,
     redact: normalizeRedact(input.redact),
+    headless,
+    ui,
   });
 }

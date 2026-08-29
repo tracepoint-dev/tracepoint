@@ -43,9 +43,25 @@ describe("runtime — full flow", () => {
     expect(q(".tp-panel")?.getAttribute("style")).toContain("display: none");
   });
 
-  it("omits the button when button:false", () => {
-    tracepoint({ webhook: "https://hook.test/x", button: false });
+  it("omits the button when ui.button is false", () => {
+    tracepoint({ webhook: "https://hook.test/x", ui: { button: false } });
     expect(q(".tp-fab")).toBeNull();
+  });
+
+  it("applies theme tokens and position to the shadow host", () => {
+    tracepoint({
+      webhook: "https://hook.test/x",
+      ui: { position: "top-left", theme: { accent: "#7c3aed" } },
+    });
+    const host = document.getElementById(ROOT_ID)!;
+    expect(host.style.getPropertyValue("--tp-accent")).toBe("#7c3aed");
+    expect(host.style.getPropertyValue("--tp-top")).toBe("20px");
+    expect(host.style.getPropertyValue("--tp-right")).toBe("auto");
+  });
+
+  it("uses a custom button label", () => {
+    tracepoint({ webhook: "https://hook.test/x", ui: { button: { label: "Feedback" } } });
+    expect(q(".tp-fab")?.textContent).toBe("Feedback");
   });
 
   it("goes open → pick → editing, showing the picked target", async () => {

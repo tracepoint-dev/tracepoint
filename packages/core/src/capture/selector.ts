@@ -1,6 +1,6 @@
 import { finder } from "@medv/finder";
 import { FINDER_TIMEOUT_MS } from "../constants.js";
-import type { SelectorConfidence } from "../internal-types.js";
+import type { SelectorConfidence } from "../types.js";
 import { isStableClass, looksAuthoredId } from "./volatile-class.js";
 
 export interface SelectorResult {

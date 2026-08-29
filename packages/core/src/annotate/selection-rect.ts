@@ -2,7 +2,7 @@
  * Stroke the picked element's bounding box onto the screenshot. Freehand
  * annotation is deferred past M1; this is the one mark the flow needs.
  */
-import type { Rect, Screenshot } from "../internal-types.js";
+import type { Rect, Screenshot } from "../types.js";
 
 const STROKE = "#e1522a";
 const STROKE_WIDTH = 2;
