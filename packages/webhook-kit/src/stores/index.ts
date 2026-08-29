@@ -1,2 +1,1 @@
-// Store implementations. Filled in P3.2 (jsonFileStore) and P3.3 (sqliteStore).
-export {};
+export { jsonFileStore, type JsonFileStoreOptions } from "./json-file.js";
