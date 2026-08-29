@@ -13,9 +13,9 @@ packages yet.
 
 | Package | What it is |
 | --- | --- |
-| [`@tracepoint-dev/core`](./packages/core) | Framework-agnostic capture core |
+| [`@tracepoint-dev/core`](./packages/core) | Framework-agnostic capture SDK |
 | [`@tracepoint-dev/react`](./packages/react) | React adapter (thin wrapper over core) |
-| [`@tracepoint-dev/connector-discord`](./packages/connector-discord) | Payload → Discord webhook formatter |
+| [`@tracepoint-dev/webhook-kit`](./packages/webhook-kit) | Mountable receiver — store, dashboard, outbound chain |
 | [`examples/demo-app`](./examples/demo-app) | Vite + React app for dogfooding and e2e |
 
 ## Working with the repo
