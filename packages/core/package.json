@@ -12,10 +12,13 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./global": "./dist/tracepoint.global.js"
   },
+  "unpkg": "./dist/tracepoint.global.js",
+  "jsdelivr": "./dist/tracepoint.global.js",
   "files": ["dist"],
-  "sideEffects": false,
+  "sideEffects": ["./dist/tracepoint.global.js"],
   "publishConfig": {
     "access": "public"
   },
