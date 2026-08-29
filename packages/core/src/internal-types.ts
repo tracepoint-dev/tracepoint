@@ -43,6 +43,8 @@ export interface DescriptorBundle {
   id: string | null;
   tag: string;
   attributes: Record<string, string>;
+  /** Form-field value, or `null` for non-fields and sensitive fields. */
+  value: string | null;
   text: string;
   ariaRole: string | null;
   accessibleName: string | null;
