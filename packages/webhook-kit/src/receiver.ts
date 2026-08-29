@@ -1,3 +1,4 @@
+import { type DashboardCtx, handleDashboard } from "./dashboard/routes.js";
 import { parseDuration } from "./internal/duration.js";
 import { extractScreenshot } from "./internal/screenshot.js";
 import type { Handler, HandlerCtx, Receiver, ReceiverOptions, StoredReport } from "./types.js";
@@ -21,6 +22,9 @@ export function createReceiver(opts: ReceiverOptions): Receiver {
   const maxAgeMs = opts.retention?.maxAge ? parseDuration(opts.retention.maxAge) : null;
   const maxCount = opts.retention?.maxCount ?? null;
   const chain: Handler[] = opts.handlers ?? [];
+  const dashboard: DashboardCtx | null = opts.dashboard
+    ? { store: opts.store, base, auth: opts.auth }
+    : null;
 
   let ready: Promise<void> | null = null;
   function ensureReady(): Promise<void> {
@@ -78,6 +82,11 @@ export function createReceiver(opts: ReceiverOptions): Receiver {
       await ensureReady();
 
       if (request.method === "POST" && rel === "/ingest") return ingest(request);
+
+      if (dashboard) {
+        const res = await handleDashboard(dashboard, request.method, rel, request);
+        if (res) return res;
+      }
 
       return json({ ok: false, error: "not found" }, 404);
     },
