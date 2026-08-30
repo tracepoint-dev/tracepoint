@@ -12,7 +12,7 @@ export default defineConfig({
   format: ["esm", "cjs"],
   dts: true,
   clean: true,
-  sourcemap: true,
+  sourcemap: false,
   treeshake: true,
   // better-sqlite3 is an optional peer — never bundle it
   external: ["better-sqlite3", "node:sqlite"],
