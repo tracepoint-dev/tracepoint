@@ -6,8 +6,8 @@ annotate, describe — and Tracepoint attaches the technical context around it: 
 DOM node, browser/env, screenshot, and (later) console + network. Feedback flows to your
 existing tools via webhook — Tracepoint feeds them, it doesn't replace them.
 
-**Status:** pre-release. Phase 1 (MVP SDK) — milestone M0 (scaffold) done. No published
-packages yet.
+**Status:** early. `0.1.0` on npm — capture SDK, React adapter, and a self-hostable
+receiver. Console + network capture is next.
 
 ## Packages
 
@@ -17,6 +17,23 @@ packages yet.
 | [`@tracepoint-dev/react`](./packages/react) | React adapter (thin wrapper over core) |
 | [`@tracepoint-dev/webhook-kit`](./packages/webhook-kit) | Mountable receiver — store, dashboard, outbound chain |
 | [`examples/demo-app`](./examples/demo-app) | Vite + React app for dogfooding and e2e |
+
+## Quick start
+
+```bash
+npm i @tracepoint-dev/core        # or @tracepoint-dev/react
+```
+
+```ts
+import { tracepoint } from "@tracepoint-dev/core";
+
+tracepoint({ webhook: "https://your-endpoint.example/hook" });
+```
+
+That mounts the floating button; each report is structured JSON POSTed to your `webhook`.
+No endpoint yet? Mount [`@tracepoint-dev/webhook-kit`](./packages/webhook-kit) in your own
+backend to store reports and get a dashboard. Per-package docs:
+[core](./packages/core) · [react](./packages/react) · [webhook-kit](./packages/webhook-kit).
 
 ## Working with the repo
 

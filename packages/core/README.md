@@ -1,9 +1,21 @@
 # @tracepoint-dev/core
 
-Framework-agnostic core of the [Tracepoint](../../README.md) feedback & diagnostics SDK:
-floating button → pick an element → screenshot → describe → structured JSON to a webhook.
+Framework-agnostic core of the [Tracepoint](https://github.com/tracepoint-dev/tracepoint)
+feedback & diagnostics SDK: floating button → pick an element → screenshot → describe →
+structured JSON to a webhook.
 
-## npm
+Using React? Reach for [`@tracepoint-dev/react`](https://www.npmjs.com/package/@tracepoint-dev/react)
+instead. Don't have an endpoint to receive reports?
+[`@tracepoint-dev/webhook-kit`](https://www.npmjs.com/package/@tracepoint-dev/webhook-kit)
+is a receiver you mount in your own backend.
+
+## Install
+
+```bash
+npm i @tracepoint-dev/core
+```
+
+## Usage
 
 ```ts
 import { tracepoint } from "@tracepoint-dev/core";
@@ -67,7 +79,16 @@ Exposes `window.tracepoint` and auto-initialises from the `data-*` attributes. T
 inlines the screenshot engine, so it is noticeably larger than the npm build (~18 KB gzip
 vs ~9.5 KB); the npm build loads the screenshot engine lazily on first use.
 
-## Status
+## The payload
 
-M1 complete — capture pipeline, redaction, screenshot, payload assembly, webhook +
-console transports. The React adapter is [`@tracepoint-dev/react`](../react) (M2).
+Each report is a single JSON object POSTed to your `webhook`: the description and
+annotations, the picked element's descriptor (selector, XPath, accessible name,
+attributes, bounding box, truncated outer HTML), page URL/route, an inline base64
+screenshot, and browser/environment info. Never captured: cookies, auth headers, tokens,
+or request/response bodies.
+
+The full JSON Schema ships with the package:
+
+```ts
+import schema from "@tracepoint-dev/core/schema" with { type: "json" };
+```

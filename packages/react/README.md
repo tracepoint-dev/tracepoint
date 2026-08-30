@@ -1,6 +1,19 @@
 # @tracepoint-dev/react
 
-React adapter for the [Tracepoint](../../README.md) feedback & diagnostics SDK.
+React adapter for the [Tracepoint](https://github.com/tracepoint-dev/tracepoint) feedback
+& diagnostics SDK. A thin wrapper over
+[`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core) — lifecycle,
+SSR safety and prop reactivity only.
+
+## Install
+
+```bash
+npm i @tracepoint-dev/react
+```
+
+`react >= 18` is a peer dependency. `@tracepoint-dev/core` is bundled in as a dependency.
+
+## Usage
 
 ```tsx
 import { Tracepoint, useTracepoint } from "@tracepoint-dev/react";
@@ -15,8 +28,9 @@ function App() {
 }
 ```
 
-- **`<Tracepoint {...config} />`** — every [`@tracepoint-dev/core`](../core) config key is a
-  prop (`webhook`, `env`, `release`, `context`, `redact`, `ui`). Place it once near the
+- **`<Tracepoint {...config} />`** — every
+  [`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core) config key
+  is a prop (`webhook`, `env`, `release`, `context`, `redact`, `ui`). Place it once near the
   root. It calls `tracepoint()` in a browser-only effect (nothing runs during SSR), keeps
   `context` in sync when that prop's contents change, and calls `destroy()` on unmount.
   Renders nothing. Init-only props are read once on mount.

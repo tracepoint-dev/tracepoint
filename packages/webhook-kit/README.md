@@ -1,8 +1,20 @@
 # @tracepoint-dev/webhook-kit
 
-The receiver side of [Tracepoint](../../README.md) — a library you mount **inside your own
-backend** (not a hosted service). It stores incoming reports, serves a dashboard, and can
-fan out to other tools.
+The receiver side of [Tracepoint](https://github.com/tracepoint-dev/tracepoint) — a
+library you mount **inside your own backend** (not a hosted service). It stores incoming
+reports from [`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core),
+serves a dashboard, and can fan out to other tools.
+
+## Install
+
+```bash
+npm i @tracepoint-dev/webhook-kit
+```
+
+Zero required dependencies. SQLite support pulls a driver only if you use `sqliteStore`
+(see [Stores](#stores)).
+
+## Usage
 
 ```ts
 import { createReceiver } from "@tracepoint-dev/webhook-kit";
@@ -24,7 +36,9 @@ import { mount } from "@tracepoint-dev/webhook-kit/express";
 app.use("/tracepoint", mount(receiver));
 ```
 
-Point your SDK's `webhook` at `…/tracepoint/ingest`.
+Point your SDK's `webhook` at `…/tracepoint/ingest`. With `dashboard: true`, the dashboard
+renders at the mount root (`…/tracepoint`) — list, per-report detail with screenshot and
+descriptor, delete, and clear-all.
 
 ## Stores
 
@@ -47,8 +61,12 @@ posts each report to a Discord webhook as an embed with the screenshot attached.
 - `@tracepoint-dev/webhook-kit/express` → `mount(receiver)` middleware
 - `@tracepoint-dev/webhook-kit/node` → `nodeHandler(receiver)` for raw `http`, Connect, Vite
 
-## Status
+## Retention
 
-Phase 3 complete — receiver, `jsonFileStore` + `sqliteStore`, store-agnostic dashboard
-(list / detail / delete / clear), `discord` connector, Express + node glue. Full
-`SDK → receiver → dashboard` loop covered by Playwright.
+`retention: { maxAge, maxCount }` is pruned on each ingest. `maxAge` takes a duration
+string (`"90d"`, `"12h"`, `"30m"`); `maxCount` keeps only the newest N reports.
+
+## Auth
+
+`auth: (request) => boolean | Promise<boolean>` gates the dashboard and its routes. The
+`/ingest` endpoint is intentionally left open — reports come from browsers.
