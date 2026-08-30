@@ -1,7 +1,13 @@
 /** Shared constants for @tracepoint-dev/core. */
 
-/** Package version. Bumped by Changesets at release. */
-export const SDK_VERSION = "0.0.0";
+/**
+ * Package version. Replaced at build time with `package.json` `version` via the
+ * `__TP_SDK_VERSION__` esbuild define in `tsup.config.ts`. Falls back to `"0.0.0"`
+ * for un-bundled runs (Vitest, `vite dev`), where the token is never defined.
+ */
+declare const __TP_SDK_VERSION__: string | undefined;
+export const SDK_VERSION: string =
+  typeof __TP_SDK_VERSION__ === "string" ? __TP_SDK_VERSION__ : "0.0.0";
 
 /** Version of the report payload envelope. Moves independently of SDK_VERSION. */
 export const SCHEMA_VERSION = "1.0";
