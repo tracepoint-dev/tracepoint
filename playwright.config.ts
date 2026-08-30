@@ -20,5 +20,21 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },
-  projects: [{ name: "chromium", use: { browserName: "chromium" } }],
+  projects: [
+    // Chromium runs the whole suite. Firefox/WebKit only re-run the screenshot
+    // fidelity spec — the rest is framework-agnostic server logic that can't vary
+    // by engine, and the specs share one file-backed store (not isolation-safe
+    // across projects).
+    { name: "chromium", use: { browserName: "chromium" } },
+    {
+      name: "firefox",
+      use: { browserName: "firefox" },
+      testMatch: /cross-browser-screenshot\.spec\.ts/,
+    },
+    {
+      name: "webkit",
+      use: { browserName: "webkit" },
+      testMatch: /cross-browser-screenshot\.spec\.ts/,
+    },
+  ],
 });
