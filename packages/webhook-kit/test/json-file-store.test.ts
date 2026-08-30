@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -73,6 +74,27 @@ describe("jsonFileStore", () => {
     const removed = await store.clear({ before: new Date("2026-08-15T00:00:00.000Z") });
     expect(removed).toBe(1);
     expect((await store.list()).map((r) => r.description)).toEqual(["new"]);
+  });
+
+  it("refuses ids that try to escape the store directory", async () => {
+    // a JSON file one level above the store dir — must stay unreachable
+    const outside = join(dir, "outside-secret.json");
+    await writeFile(outside, JSON.stringify({ token: "s3cret" }));
+
+    for (const bad of [
+      "../outside-secret",
+      "..\\outside-secret",
+      "../../etc/hosts",
+      "a/b",
+      "x.json",
+    ]) {
+      expect(await store.get(bad)).toBeNull();
+      expect(await store.readScreenshot(bad)).toBeNull();
+      await store.delete(bad); // no-op, must not throw
+    }
+
+    expect(existsSync(outside)).toBe(true);
+    expect(JSON.parse(await readFile(outside, "utf8")).token).toBe("s3cret");
   });
 
   it("handles a report with no screenshot", async () => {

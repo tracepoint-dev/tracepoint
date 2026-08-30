@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ListOptions, Store, StoredReport } from "../types.js";
-import { extFor, makeId, mimeForExt, summarize } from "./ids.js";
+import { extFor, isSafeId, makeId, mimeForExt, summarize } from "./ids.js";
 
 export interface JsonFileStoreOptions {
   /** Directory the store owns. Reports go in `<dir>/reports/`. */
@@ -79,11 +79,12 @@ export function jsonFileStore(opts: JsonFileStoreOptions): Store {
     },
 
     async get(id) {
-      if (!existsSync(jsonPath(id))) return null;
+      if (!isSafeId(id) || !existsSync(jsonPath(id))) return null;
       return JSON.parse(await readFile(jsonPath(id), "utf8")) as StoredReport;
     },
 
     async readScreenshot(id) {
+      if (!isSafeId(id)) return null;
       const path = await screenshotPath(id);
       if (!path) return null;
       const ext = path.slice(path.lastIndexOf(".") + 1);
@@ -91,6 +92,7 @@ export function jsonFileStore(opts: JsonFileStoreOptions): Store {
     },
 
     async delete(id) {
+      if (!isSafeId(id)) return;
       await rm(jsonPath(id), { force: true });
       const shot = await screenshotPath(id);
       if (shot) await rm(shot, { force: true });
