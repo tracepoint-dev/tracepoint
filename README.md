@@ -6,8 +6,8 @@ annotate, describe — and Tracepoint attaches the technical context around it: 
 DOM node, browser/env, screenshot, and (later) console + network. Feedback flows to your
 existing tools via webhook — Tracepoint feeds them, it doesn't replace them.
 
-**Status:** early. `0.1.0` on npm — capture SDK, React adapter, and a self-hostable
-receiver. Console + network capture is next.
+**Status:** early. On npm — capture SDK, React adapter, and a self-hostable receiver.
+Console + network capture is next.
 
 ## Packages
 
@@ -34,6 +34,23 @@ That mounts the floating button; each report is structured JSON POSTed to your `
 No endpoint yet? Mount [`@tracepoint-dev/webhook-kit`](./packages/webhook-kit) in your own
 backend to store reports and get a dashboard. Per-package docs:
 [core](./packages/core) · [react](./packages/react) · [webhook-kit](./packages/webhook-kit).
+
+## Security
+
+Tracepoint is built to be safe to drop into a production app.
+
+- **The SDK sends nothing until the user submits a report** — no background collection, no
+  network on load. It never reads cookies, `localStorage`, tokens, or request/response
+  bodies. Password fields and your `redact` selectors are hidden before the screenshot,
+  which is rendered from the DOM in the browser (no third-party screenshot service).
+- **Reports go only to the `webhook` URL you set.** There is no Tracepoint server.
+- **`webhook-kit` runs entirely in your infrastructure** — no phone-home, parameterized
+  SQL, server-generated ids, isolated handler failures, `auth`-gated dashboard.
+
+Details in each package's Security section: [core](./packages/core#security) ·
+[react](./packages/react#security) · [webhook-kit](./packages/webhook-kit#security). To
+report a vulnerability, open a
+[GitHub security advisory](https://github.com/tracepoint-dev/tracepoint/security/advisories/new).
 
 ## Working with the repo
 

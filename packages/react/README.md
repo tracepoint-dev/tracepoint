@@ -47,3 +47,13 @@ function App() {
 
 The adapter is deliberately thin — lifecycle, SSR safety, prop reactivity only. All
 capture logic lives in core.
+
+## Security
+
+This package captures, stores, and sends nothing of its own — it just starts and stops
+core. Every safeguard in
+[`@tracepoint-dev/core`'s Security section](https://www.npmjs.com/package/@tracepoint-dev/core#security)
+applies unchanged: reports go out only on user submit, no cookies / tokens / storage are
+read, password fields and your `redact` selectors are hidden from the screenshot, and the
+payload only ever goes to your `webhook`. On the server (SSR) this component renders and
+runs nothing at all.

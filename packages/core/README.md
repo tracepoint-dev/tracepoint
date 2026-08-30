@@ -92,3 +92,22 @@ The full JSON Schema ships with the package:
 ```ts
 import schema from "@tracepoint-dev/core/schema" with { type: "json" };
 ```
+
+## Security
+
+- **It only sends a report when the user clicks submit.** Nothing goes out when the page
+  loads, and nothing runs in the background.
+- **It never reads cookies, `localStorage`, login tokens, or the contents of your network
+  requests.**
+- **Before the screenshot, it blanks out password fields** (and restores them after).
+  Anything you list in `redact` — plus credit-card fields and `.tp-redact` — is hidden from
+  the screenshot too.
+- **It captures the text/value of the one element the user picked**, never from password or
+  hidden fields. It copies a short fixed list of attributes (`id`, `class`, `aria-*`, test
+  IDs…), not every `data-*`, and truncates `outerHTML` rather than taking the whole subtree.
+- **The screenshot is drawn from your page, in the browser.** No screenshot service, no
+  upload — the pixels only travel in the payload you POST to your own `webhook`.
+- **The widget runs in a shadow root**, so the rest of your page can't style or read it.
+- **Reports go to your endpoint.** There is no Tracepoint server in the loop, and
+  `Transport` is swappable if you want to send them somewhere else entirely.
+- MIT, ~10 KB, dependencies make no network calls — small enough to read.
