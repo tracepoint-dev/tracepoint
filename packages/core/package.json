@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Framework-agnostic core of the Tracepoint feedback & diagnostics SDK.",
   "license": "MIT",
+  "author": "Amit Mishra",
+  "homepage": "https://github.com/tracepoint-dev/tracepoint/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tracepoint-dev/tracepoint.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/tracepoint-dev/tracepoint/issues",
+  "keywords": ["feedback", "bug-report", "diagnostics", "screenshot", "annotation", "dom", "sdk"],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

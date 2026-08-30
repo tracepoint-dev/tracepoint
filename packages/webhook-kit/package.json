@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Mountable receiver for Tracepoint reports — store, dashboard, and outbound chain.",
   "license": "MIT",
+  "author": "Amit Mishra",
+  "homepage": "https://github.com/tracepoint-dev/tracepoint/tree/main/packages/webhook-kit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tracepoint-dev/tracepoint.git",
+    "directory": "packages/webhook-kit"
+  },
+  "bugs": "https://github.com/tracepoint-dev/tracepoint/issues",
+  "keywords": ["feedback", "bug-report", "webhook", "receiver", "dashboard", "self-hosted"],
   "type": "module",
   "exports": {
     ".": {
