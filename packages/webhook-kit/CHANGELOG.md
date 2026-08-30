@@ -1,5 +1,14 @@
 # @tracepoint-dev/webhook-kit
 
+## 0.1.1
+
+### Patch Changes
+
+- Docs: clean package READMEs for the npm pages — drop internal milestone/status
+  sections, add an Install section to each, use absolute links that resolve on
+  npmjs.com, and document the report payload + JSON Schema (core) and the
+  retention / auth / dashboard-URL behaviour (webhook-kit). No code changes.
+
 ## 0.1.0
 
 ### Minor Changes
