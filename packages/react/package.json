@@ -1,6 +1,6 @@
 {
   "name": "@tracepoint-dev/react",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "React adapter for the Tracepoint feedback & diagnostics SDK.",
   "license": "MIT",
   "author": "Amit Mishra",
