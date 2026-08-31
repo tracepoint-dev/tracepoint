@@ -11,29 +11,51 @@ Console + network capture is next.
 
 ## Packages
 
-| Package | What it is |
-| --- | --- |
-| [`@tracepoint-dev/core`](./packages/core) | Framework-agnostic capture SDK |
-| [`@tracepoint-dev/react`](./packages/react) | React adapter (thin wrapper over core) |
-| [`@tracepoint-dev/webhook-kit`](./packages/webhook-kit) | Mountable receiver — store, dashboard, outbound chain |
-| [`examples/demo-app`](./examples/demo-app) | Vite + React app for dogfooding and e2e |
+| Package | What it is | Links |
+| --- | --- | --- |
+| `@tracepoint-dev/core` | Framework-agnostic capture SDK | [npm](https://www.npmjs.com/package/@tracepoint-dev/core) · [readme](./packages/core) |
+| `@tracepoint-dev/react` | React adapter (thin wrapper over core) | [npm](https://www.npmjs.com/package/@tracepoint-dev/react) · [readme](./packages/react) |
+| `@tracepoint-dev/webhook-kit` | Mountable receiver — store, dashboard, outbound chain | [npm](https://www.npmjs.com/package/@tracepoint-dev/webhook-kit) · [readme](./packages/webhook-kit) |
+| `examples/demo-app` | Vite + React app for dogfooding and e2e | [src](./examples/demo-app) |
 
 ## Quick start
 
-```bash
-npm i @tracepoint-dev/core        # or @tracepoint-dev/react
-```
+**Vanilla JS / any framework** — [`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core)
 
 ```ts
 import { tracepoint } from "@tracepoint-dev/core";
 
-tracepoint({ webhook: "https://your-endpoint.example/hook" });
+tracepoint({ webhook: "https://yourapp.com/tracepoint/ingest" });
 ```
 
-That mounts the floating button; each report is structured JSON POSTed to your `webhook`.
-No endpoint yet? Mount [`@tracepoint-dev/webhook-kit`](./packages/webhook-kit) in your own
-backend to store reports and get a dashboard. Per-package docs:
-[core](./packages/core) · [react](./packages/react) · [webhook-kit](./packages/webhook-kit).
+**React** — [`@tracepoint-dev/react`](https://www.npmjs.com/package/@tracepoint-dev/react)
+
+```tsx
+import { Tracepoint } from "@tracepoint-dev/react";
+
+<Tracepoint webhook="https://yourapp.com/tracepoint/ingest" />;
+```
+
+Either one mounts the floating button; each report is structured JSON POSTed to your
+`webhook`.
+
+**Receive the reports** — [`@tracepoint-dev/webhook-kit`](https://www.npmjs.com/package/@tracepoint-dev/webhook-kit),
+mounted in your own backend
+
+```ts
+import { createReceiver } from "@tracepoint-dev/webhook-kit";
+import { jsonFileStore } from "@tracepoint-dev/webhook-kit/stores";
+import { mount } from "@tracepoint-dev/webhook-kit/express";
+
+const receiver = createReceiver({
+  store: jsonFileStore({ dir: ".tracepoint" }),
+  dashboard: true,
+});
+app.use("/tracepoint", mount(receiver)); // ingest at /tracepoint/ingest, dashboard at /tracepoint
+```
+
+No backend to mount it in? Point `webhook` at any URL that accepts a POST (webhook.site,
+a serverless function, an existing endpoint) — the receiver is optional.
 
 ## Security
 
