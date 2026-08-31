@@ -6,12 +6,12 @@ import { jsonFileStore } from "@tracepoint-dev/webhook-kit/stores";
 import react from "@vitejs/plugin-react";
 import { type Plugin, defineConfig } from "vite";
 
-/** Mounts a real @tracepoint-dev/webhook-kit receiver at /__tp for the demo + e2e. */
+/** Mounts a real @tracepoint-dev/webhook-kit receiver at /tracepoint for the demo + e2e. */
 function tracepointReceiver(): Plugin {
   const receiver = createReceiver({
     store: jsonFileStore({ dir: join(tmpdir(), "tracepoint-demo") }),
     dashboard: true,
-    basePath: "/__tp",
+    basePath: "/tracepoint",
   });
   const handle = nodeHandler(receiver);
 
@@ -19,7 +19,7 @@ function tracepointReceiver(): Plugin {
     name: "tracepoint-receiver",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith("/__tp")) handle(req, res, next);
+        if (req.url?.startsWith("/tracepoint")) handle(req, res, next);
         else next();
       });
     },

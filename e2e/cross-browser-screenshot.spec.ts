@@ -11,7 +11,7 @@ test("capture produces a non-blank screenshot", async ({ page }, testInfo) => {
   const note = `xbrowser ${testInfo.project.name} ${Date.now()}`;
 
   const ingest = page.waitForRequest(
-    (r) => r.url().includes("/__tp/ingest") && r.method() === "POST",
+    (r) => r.url().includes("/tracepoint/ingest") && r.method() === "POST",
   );
 
   await page.goto("/");
@@ -24,7 +24,7 @@ test("capture produces a non-blank screenshot", async ({ page }, testInfo) => {
 
   const [req] = await Promise.all([
     ingest,
-    page.waitForResponse((r) => r.url().includes("/__tp/ingest") && r.status() === 201),
+    page.waitForResponse((r) => r.url().includes("/tracepoint/ingest") && r.status() === 201),
     page.getByRole("button", { name: "Send" }).click(),
   ]);
 

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// A real @tracepoint-dev/webhook-kit receiver is mounted at /__tp by the demo's
+// A real @tracepoint-dev/webhook-kit receiver is mounted at /tracepoint by the demo's
 // vite config (file store + dashboard). These specs drive the whole loop.
 
 test("button → pick → describe → submit → appears in the dashboard → delete", async ({ page }) => {
@@ -15,13 +15,13 @@ test("button → pick → describe → submit → appears in the dashboard → d
   await page.getByPlaceholder("Describe the issue…").fill(note);
 
   await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/__tp/ingest") && r.status() === 201),
+    page.waitForResponse((r) => r.url().includes("/tracepoint/ingest") && r.status() === 201),
     page.getByRole("button", { name: "Send" }).click(),
   ]);
   await expect(page.getByText("Sent — thanks")).toBeVisible();
 
   // dashboard shows it
-  await page.goto("/__tp");
+  await page.goto("/tracepoint");
   await expect(page.getByRole("link", { name: note })).toBeVisible();
 
   // detail page has the description, the descriptor section, and the screenshot
@@ -33,7 +33,7 @@ test("button → pick → describe → submit → appears in the dashboard → d
   // delete it
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page).toHaveURL(/\/__tp\/?$/);
+  await expect(page).toHaveURL(/\/tracepoint\/?$/);
   await expect(page.getByRole("link", { name: note })).toHaveCount(0);
 });
 
