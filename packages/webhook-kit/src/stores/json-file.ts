@@ -46,6 +46,7 @@ export function jsonFileStore(opts: JsonFileStoreOptions): Store {
         id,
         createdAt,
         receivedAt: new Date().toISOString(),
+        status: "pending",
         payload,
         screenshot: screenshot
           ? { mimeType: screenshot.mimeType, width: screenshot.width, height: screenshot.height }
@@ -66,10 +67,12 @@ export function jsonFileStore(opts: JsonFileStoreOptions): Store {
         const record = await this.get(id);
         if (!record) continue;
         if (since !== undefined && new Date(record.createdAt).getTime() < since) continue;
+        if (opts.status && record.status !== opts.status) continue;
         const { description, route } = summarize(record.payload);
         out.push({
           id,
           createdAt: record.createdAt,
+          status: record.status,
           description,
           route,
           hasScreenshot: record.screenshot != null,
@@ -80,7 +83,17 @@ export function jsonFileStore(opts: JsonFileStoreOptions): Store {
 
     async get(id) {
       if (!isSafeId(id) || !existsSync(jsonPath(id))) return null;
-      return JSON.parse(await readFile(jsonPath(id), "utf8")) as StoredReport;
+      const record = JSON.parse(await readFile(jsonPath(id), "utf8")) as StoredReport;
+      // Back-fill for records written before the status field existed.
+      record.status ??= "pending";
+      return record;
+    },
+
+    async setStatus(id, status) {
+      const record = await this.get(id);
+      if (!record) return;
+      record.status = status;
+      await writeFile(jsonPath(id), JSON.stringify(record, null, 2));
     },
 
     async readScreenshot(id) {

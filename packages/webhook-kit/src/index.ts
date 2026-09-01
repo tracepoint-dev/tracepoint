@@ -10,6 +10,7 @@ export type {
   ListOptions,
   Receiver,
   ReceiverOptions,
+  ReportStatus,
   ReportSummary,
   RetentionOptions,
   SaveInput,

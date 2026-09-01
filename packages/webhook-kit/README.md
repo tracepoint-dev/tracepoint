@@ -165,6 +165,17 @@ delete, and clear-all. Server-rendered HTML, no build step, no client JS.
 The `jsonFileStore` also writes `<dir>/reports/<id>.json` (the report) plus `<id>.png`
 (the screenshot) — greppable, diffable, easy to back up.
 
+## Triage: approve / reject
+
+Every report lands as **`pending`**. From a report's detail page a reviewer can **Approve**,
+**Reject**, or reset it to pending — re-clicking flips it. The list defaults to the pending
+queue; the `Pending / Approved / Rejected / All` tabs (or `?status=`) switch views.
+Rejected reports stay stored (audit / dedup); only Delete removes them.
+
+Programmatically it's `store.setStatus(id, "approved" | "rejected" | "pending")` and
+`store.list({ status })`. This is the gate the Phase 4 MCP reads through — it will only
+ever expose `approved` reports to an agent.
+
 ## Choosing a store
 
 | Store | Import | Needs | Use when |
@@ -179,8 +190,8 @@ const store = sqliteStore({ file: "./tracepoint.db" }); // or ":memory:"
 
 The search / route-filter inputs appear in the dashboard only when the store supports them
 (`store.capabilities`) — SQLite does, the file store doesn't. A custom store is any object
-implementing the `Store` interface (`init / save / list / get / readScreenshot / delete /
-clear`); Postgres and libSQL adapters are on the roadmap.
+implementing the `Store` interface (`init / save / list / get / setStatus / readScreenshot /
+delete / clear`); Postgres and libSQL adapters are on the roadmap.
 
 **Already have reports in a database?** `createDashboard({ store })` from
 `@tracepoint-dev/webhook-kit/dashboard` mounts just the read UI against any store, without
@@ -244,9 +255,10 @@ All relative to `basePath` (default `/tracepoint`).
 | Method & path | What | Auth |
 | --- | --- | --- |
 | `POST /ingest` | SDK posts a report → `201 { ok, id }` | open |
-| `GET /` | dashboard — report list | guarded |
+| `GET /` | dashboard — report list (`?status=pending\|approved\|rejected\|all`, default `pending`) | guarded |
 | `GET /reports/:id` | dashboard — one report | guarded |
 | `GET /reports/:id/screenshot` | the PNG bytes | guarded |
+| `POST /reports/:id/status` | set triage state — body `status=approved\|rejected\|pending` | guarded |
 | `POST /reports/:id/delete` | delete one report | guarded |
 | `POST /clear` | delete all reports | guarded |
 

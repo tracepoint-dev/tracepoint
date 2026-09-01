@@ -1,4 +1,4 @@
-import type { ReportSummary, StoredReport } from "../types.js";
+import type { ReportStatus, ReportSummary, StoredReport } from "../types.js";
 
 export function esc(value: unknown): string {
   return String(value ?? "").replace(
@@ -40,6 +40,16 @@ const STYLE = `
   input { font: inherit; padding: 5px 8px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; }
   button { font: inherit; padding: 5px 12px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
   button.danger { border-color: #e0503066; color: #e05030; }
+  button.ok { border-color: #2e7d4f66; color: #2e7d4f; }
+  button[disabled] { opacity: .5; cursor: default; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs a { padding: 5px 10px; border: 1px solid #8886; border-radius: 6px; text-decoration: none; color: inherit; opacity: .7; }
+  .tabs a.on { opacity: 1; border-color: currentColor; font-weight: 600; }
+  .badge { display: inline-block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; border-radius: 4px; border: 1px solid #8886; opacity: .8; }
+  .badge.approved { border-color: #2e7d4f88; color: #2e7d4f; }
+  .badge.rejected { border-color: #e0503088; color: #e05030; }
+  .actions { display: flex; gap: 8px; margin: 12px 0; align-items: center; }
+  .actions form { display: inline; }
   .more { display: inline-block; margin-top: 14px; }
   .detail img { max-width: 100%; border: 1px solid #8883; border-radius: 6px; }
   .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; margin: 10px 0; }
@@ -63,11 +73,30 @@ interface ListCaps {
   routeFilter?: boolean;
 }
 
+const TABS: ReadonlyArray<{ key: string; label: string }> = [
+  { key: "pending", label: "Pending" },
+  { key: "approved", label: "Approved" },
+  { key: "rejected", label: "Rejected" },
+  { key: "all", label: "All" },
+];
+
+function statusTabs(base: string, active: string): string {
+  const links = TABS.map(
+    (t) =>
+      `<a class="${t.key === active ? "on" : ""}" href="${esc(base) || "/"}?status=${t.key}">${t.label}</a>`,
+  ).join("");
+  return `<div class="tabs">${links}</div>`;
+}
+
+function badge(status: ReportStatus): string {
+  return `<span class="badge ${status}">${esc(status)}</span>`;
+}
+
 export function renderList(
   base: string,
   rows: ReportSummary[],
   limit: number,
-  query: { q?: string; route?: string },
+  query: { q?: string; route?: string; status: string },
   caps: ListCaps,
 ): string {
   const filters: string[] = [];
@@ -78,25 +107,28 @@ export function renderList(
     filters.push(`<input name="route" placeholder="Route" value="${esc(query.route ?? "")}">`);
   }
   const filterForm = filters.length
-    ? `<form method="get">${filters.join("")}<button>Filter</button></form>`
+    ? `<form method="get"><input type="hidden" name="status" value="${esc(query.status)}">${filters.join("")}<button>Filter</button></form>`
     : "";
 
   const body = rows.length
-    ? `<table><thead><tr><th>When</th><th>Route</th><th>Description</th><th></th></tr></thead><tbody>${rows
+    ? `<table><thead><tr><th>When</th><th>Status</th><th>Route</th><th>Description</th><th></th></tr></thead><tbody>${rows
         .map(
           (r) => `<tr>
         <td class="when">${esc(relTime(r.createdAt))}</td>
+        <td>${badge(r.status)}</td>
         <td class="route">${esc(r.route ?? "—")}</td>
         <td><a class="report" href="${esc(base)}/reports/${esc(r.id)}">${esc(r.description || "(no description)")}</a></td>
         <td>${r.hasScreenshot ? `<img class="thumb" src="${esc(base)}/reports/${esc(r.id)}/screenshot" alt="">` : ""}</td>
       </tr>`,
         )
         .join("")}</tbody></table>`
-    : "<p>No reports yet.</p>";
+    : `<p>No ${query.status === "all" ? "" : `${esc(query.status)} `}reports.</p>`;
 
+  const qs = (extra: string) =>
+    `?status=${esc(query.status)}${extra}${query.q ? `&q=${encodeURIComponent(query.q)}` : ""}${query.route ? `&route=${encodeURIComponent(query.route)}` : ""}`;
   const more =
     rows.length >= limit
-      ? `<a class="more" href="${esc(base)}?limit=${limit + 50}${query.q ? `&q=${encodeURIComponent(query.q)}` : ""}${query.route ? `&route=${encodeURIComponent(query.route)}` : ""}">Show 50 more</a>`
+      ? `<a class="more" href="${esc(base) || "/"}${qs(`&limit=${limit + 50}`)}">Show 50 more</a>`
       : "";
 
   const clear = `<form method="post" action="${esc(base)}/clear" onsubmit="return confirm('Delete all reports?')"><button class="danger">Clear all</button></form>`;
@@ -104,7 +136,7 @@ export function renderList(
   return layout(
     "Reports · Tracepoint",
     base,
-    `<div class="bar">${filterForm}${clear}</div>${body}${more}`,
+    `<div class="bar">${statusTabs(base, query.status)}${filterForm}${clear}</div>${body}${more}`,
   );
 }
 
@@ -127,10 +159,23 @@ export function renderDetail(base: string, report: StoredReport): string {
     ? `<img src="${esc(base)}/reports/${esc(report.id)}/screenshot" alt="screenshot">`
     : "";
 
+  const statusBtn = (value: ReportStatus, label: string, cls = "") =>
+    `<form method="post" action="${esc(base)}/reports/${esc(report.id)}/status">
+       <input type="hidden" name="status" value="${value}">
+       <button class="${cls}"${report.status === value ? " disabled" : ""}>${label}</button>
+     </form>`;
+  const actions = `<div class="actions">
+    ${badge(report.status)}
+    ${statusBtn("approved", "Approve", "ok")}
+    ${statusBtn("rejected", "Reject", "danger")}
+    ${statusBtn("pending", "Reset to pending")}
+  </div>`;
+
   const body = `<div class="detail">
     <p><a href="${esc(base)}">&larr; reports</a></p>
     <h1>${esc((rep.description as string) || "(no description)")}</h1>
     <p class="when">${esc(relTime(report.createdAt))} · <span class="route">${esc(page.route ?? "—")}</span> · ${esc(page.url)}</p>
+    ${actions}
     ${shot}
     <section><h2>Target</h2>${target ? kv(target) : "<p>—</p>"}</section>
     <section><h2>Client</h2>${kv(client)}</section>

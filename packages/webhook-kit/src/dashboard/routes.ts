@@ -1,5 +1,8 @@
-import type { ReceiverOptions, Store } from "../types.js";
+import type { ReceiverOptions, ReportStatus, Store } from "../types.js";
 import { renderDetail, renderList } from "./view.js";
+
+const STATUSES: readonly ReportStatus[] = ["pending", "approved", "rejected"];
+const isStatus = (v: unknown): v is ReportStatus => STATUSES.includes(v as ReportStatus);
 
 export interface DashboardCtx {
   store: Store;
@@ -28,20 +31,31 @@ export async function handleDashboard(
     rel === "/" ||
     rel === "/clear" ||
     /^\/reports\/[^/]+$/.test(rel) ||
-    /^\/reports\/[^/]+\/(screenshot|delete)$/.test(rel);
+    /^\/reports\/[^/]+\/(screenshot|delete|status)$/.test(rel);
   if (!isRoute) return null;
 
   if (ctx.auth && !(await ctx.auth(request))) {
     return new Response("unauthorized", { status: 401 });
   }
 
-  // GET /
+  // GET /  — defaults to the pending queue; ?status=approved|rejected|all
   if (method === "GET" && rel === "/") {
     const limit = Math.min(Number(url.searchParams.get("limit")) || 50, 500);
     const q = url.searchParams.get("q") ?? undefined;
     const route = url.searchParams.get("route") ?? undefined;
-    const rows = await ctx.store.list({ limit, search: q, route });
-    return html(renderList(ctx.base, rows, limit, { q, route }, ctx.store.capabilities ?? {}));
+    const statusParam = url.searchParams.get("status") ?? "pending";
+    const filter =
+      statusParam === "all" ? undefined : isStatus(statusParam) ? statusParam : "pending";
+    const rows = await ctx.store.list({ limit, search: q, route, status: filter });
+    return html(
+      renderList(
+        ctx.base,
+        rows,
+        limit,
+        { q, route, status: statusParam },
+        ctx.store.capabilities ?? {},
+      ),
+    );
   }
 
   // GET /reports/:id
@@ -60,6 +74,16 @@ export async function handleDashboard(
     return new Response(file.bytes, {
       headers: { "content-type": file.mimeType, "cache-control": "private, max-age=3600" },
     });
+  }
+
+  // POST /reports/:id/status  — body: status=approved|rejected|pending
+  const setStatus = /^\/reports\/([^/]+)\/status$/.exec(rel);
+  if (method === "POST" && setStatus) {
+    const id = decodeURIComponent(setStatus[1] as string);
+    const next = (await request.formData().catch(() => null))?.get("status");
+    if (!isStatus(next)) return html("<p>Invalid status</p>", 400);
+    await ctx.store.setStatus(id, next);
+    return redirect(`${ctx.base}/reports/${encodeURIComponent(id)}`);
   }
 
   // POST /reports/:id/delete

@@ -103,4 +103,37 @@ describe("jsonFileStore", () => {
     expect(await store.readScreenshot(id)).toBeNull();
     expect((await store.list())[0]?.hasScreenshot).toBe(false);
   });
+
+  it("new reports are pending; setStatus flips them; list filters by status", async () => {
+    const a = await store.save(input("a", "2026-08-30T00:00:00.000Z"));
+    const b = await store.save(input("b", "2026-08-30T00:05:00.000Z"));
+
+    expect((await store.get(a.id))?.status).toBe("pending");
+    expect((await store.list())[0]?.status).toBe("pending");
+
+    await store.setStatus(a.id, "approved");
+    expect((await store.get(a.id))?.status).toBe("approved");
+    // the rest of the record is intact
+    expect((await store.get(a.id))?.payload.report).toMatchObject({ description: "a" });
+
+    expect((await store.list({ status: "approved" })).map((r) => r.id)).toEqual([a.id]);
+    expect((await store.list({ status: "pending" })).map((r) => r.id)).toEqual([b.id]);
+    expect((await store.list()).length).toBe(2); // no filter = all
+
+    await store.setStatus("no-such-id", "approved"); // no-op, must not throw
+  });
+
+  it("back-fills status: pending for records written before the field existed", async () => {
+    const legacy = {
+      id: "2026-08-30T00-00-00-000_legacy",
+      createdAt: "2026-08-30T00:00:00.000Z",
+      receivedAt: "2026-08-30T00:00:01.000Z",
+      payload: { report: { description: "legacy", annotations: [] }, page: { route: "/x" } },
+      screenshot: null,
+    };
+    await writeFile(join(dir, "reports", `${legacy.id}.json`), JSON.stringify(legacy));
+
+    expect((await store.get(legacy.id))?.status).toBe("pending");
+    expect((await store.list({ status: "pending" })).map((r) => r.id)).toContain(legacy.id);
+  });
 });
