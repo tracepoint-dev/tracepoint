@@ -5,6 +5,7 @@
 import { TEST_ID_ATTRS } from "../constants.js";
 import type { DescriptorBundle } from "../types.js";
 import { collectAttributes, safeFieldValue } from "./attributes.js";
+import { runContributors } from "./contributors.js";
 import { accessibleName, findInteractiveAncestor } from "./interactive-ancestor.js";
 import { outerHtmlSnippet } from "./outer-html.js";
 import { generateSelector } from "./selector.js";
@@ -81,5 +82,6 @@ export function buildDescriptor(el: Element): DescriptorBundle {
     },
     ancestors: ancestorChain(el),
     outerHtml: outerHtmlSnippet(el),
+    component: runContributors(el),
   };
 }

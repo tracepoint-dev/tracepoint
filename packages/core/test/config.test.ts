@@ -97,4 +97,76 @@ describe("normalizeConfig", () => {
     const c = normalizeConfig({ webhook: "https://x.test" });
     expect(Object.isFrozen(c)).toBe(true);
   });
+
+  // ---------------------------------------------------------------- Phase 2 keys
+
+  it("leaves console + network capture off by default", () => {
+    const c = normalizeConfig({ webhook: "https://x.test" });
+    expect(c.console).toBeNull();
+    expect(c.network).toBeNull();
+  });
+
+  it("`console: true` fills capture defaults", () => {
+    const c = normalizeConfig({ webhook: "https://x.test", console: true });
+    expect(c.console).toEqual({
+      levels: ["log", "info", "warn", "error", "debug"],
+      limit: 50,
+      maxEntryBytes: 4096,
+      totalBytes: 32768,
+    });
+  });
+
+  it("`console` object overrides only what it sets", () => {
+    const c = normalizeConfig({
+      webhook: "https://x.test",
+      console: { levels: ["error", "warn", "bogus"] as never, limit: 10 },
+    });
+    expect(c.console?.levels).toEqual(["error", "warn"]);
+    expect(c.console?.limit).toBe(10);
+    expect(c.console?.maxEntryBytes).toBe(4096);
+  });
+
+  it("`network` object keeps string + RegExp denyUrls, drops junk", () => {
+    const c = normalizeConfig({
+      webhook: "https://x.test",
+      network: { limit: 5, denyUrls: ["/analytics", /segment\.io/, 42 as never] },
+    });
+    expect(c.network?.limit).toBe(5);
+    expect(c.network?.denyUrls).toHaveLength(2);
+  });
+
+  it("warns and disables capture on a non-object console value", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const c = normalizeConfig({ webhook: "https://x.test", console: 5 as never });
+    expect(c.console).toBeNull();
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("accepts the object `redact` form and merges urlParams over the built-ins", () => {
+    const fn = (s: string) => s.replace(/x/g, "*");
+    const c = normalizeConfig({
+      webhook: "https://x.test",
+      redact: { selectors: [".secret"], text: fn, urlParams: ["Tenant"], pii: true },
+    });
+    expect(c.redact).toEqual([".secret"]);
+    expect(c.redactText).toBe(fn);
+    expect(c.redactPii).toBe(true);
+    expect(c.redactUrlParams).toContain("token"); // built-in kept
+    expect(c.redactUrlParams).toContain("tenant"); // user extra, lower-cased
+  });
+
+  it("bare-array `redact` still works and seeds the default urlParams", () => {
+    const c = normalizeConfig({ webhook: "https://x.test", redact: [".a"] });
+    expect(c.redact).toEqual([".a"]);
+    expect(c.redactText).toBeNull();
+    expect(c.redactPii).toBe(false);
+    expect(c.redactUrlParams).toContain("access_token");
+  });
+
+  it("keeps a function `context` as `contextFn`, not `context`", () => {
+    const fn = () => ({ userId: "u_9" });
+    const c = normalizeConfig({ webhook: "https://x.test", context: fn });
+    expect(c.context).toEqual({});
+    expect(c.contextFn).toBe(fn);
+  });
 });

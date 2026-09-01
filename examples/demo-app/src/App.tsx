@@ -60,8 +60,40 @@ function HeadlessDemo() {
   );
 }
 
+/** Diagnostics demo (`?diagnostics`): console + network capture opted in. */
+function DiagnosticsDemo() {
+  return (
+    <main style={page}>
+      <Tracepoint webhook={HOOK} env="demo" console network />
+      <h1>Diagnostics demo</h1>
+      <button
+        type="button"
+        data-testid="log-error"
+        onClick={() => console.error("kaboom from demo")}
+      >
+        Log a console error
+      </button>{" "}
+      <button
+        type="button"
+        data-testid="bad-fetch"
+        onClick={() => {
+          void fetch("/tracepoint/does-not-exist").catch(() => {});
+        }}
+      >
+        Trigger a failing fetch
+      </button>
+      <p>
+        <button type="button" data-testid="sample-action">
+          Create project
+        </button>
+      </p>
+    </main>
+  );
+}
+
 export function App() {
-  const headless =
-    typeof location !== "undefined" && new URLSearchParams(location.search).has("headless");
-  return headless ? <HeadlessDemo /> : <DefaultDemo />;
+  const params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
+  if (params.has("headless")) return <HeadlessDemo />;
+  if (params.has("diagnostics")) return <DiagnosticsDemo />;
+  return <DefaultDemo />;
 }

@@ -38,7 +38,11 @@ function configsDiffer(a: NormalizedConfig, b: NormalizedConfig): boolean {
     a.env !== b.env ||
     a.release !== b.release ||
     a.headless !== b.headless ||
+    a.redactPii !== b.redactPii ||
     JSON.stringify(a.redact) !== JSON.stringify(b.redact) ||
+    JSON.stringify(a.redactUrlParams) !== JSON.stringify(b.redactUrlParams) ||
+    JSON.stringify(a.console) !== JSON.stringify(b.console) ||
+    JSON.stringify(a.network) !== JSON.stringify(b.network) ||
     JSON.stringify(a.context) !== JSON.stringify(b.context) ||
     JSON.stringify(a.ui) !== JSON.stringify(b.ui)
   );

@@ -98,4 +98,9 @@ describe("buildDescriptor", () => {
       "Close dialog",
     );
   });
+
+  it("leaves component null when no framework contributor is registered", () => {
+    mount("<button>Plain</button>");
+    expect(buildDescriptor(root.querySelector("button") as Element).component).toBeNull();
+  });
 });
