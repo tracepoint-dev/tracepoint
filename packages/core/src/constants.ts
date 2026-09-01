@@ -9,8 +9,12 @@ declare const __TP_SDK_VERSION__: string | undefined;
 export const SDK_VERSION: string =
   typeof __TP_SDK_VERSION__ === "string" ? __TP_SDK_VERSION__ : "0.0.0";
 
-/** Version of the report payload envelope. Moves independently of SDK_VERSION. */
-export const SCHEMA_VERSION = "1.0";
+/**
+ * Version of the report payload envelope. Moves independently of SDK_VERSION.
+ * `2.0` (Phase 2): additive — `console` / `errors` / `network` / `capture` top-level
+ * keys plus `target.component`. Every v1 field keeps its name, type, and meaning.
+ */
+export const SCHEMA_VERSION = "2.0";
 
 /** id of the shadow host element mounted on `<html>`. */
 export const ROOT_ID = "tracepoint-root";
@@ -49,3 +53,48 @@ export const TEST_ID_ATTRS: readonly string[] = ["data-testid", "data-test", "da
 
 /** Input types whose `value` is never captured. */
 export const SENSITIVE_INPUT_TYPES: readonly string[] = ["password", "hidden"];
+
+// ---------------------------------------------------------------- Phase 2 capture
+
+/** Console levels the collector can be asked to keep. */
+export const CONSOLE_LEVELS = ["log", "info", "warn", "error", "debug"] as const;
+
+/** Ring-buffer defaults (ADR 0004 D7 / plan D5). All overridable via config. */
+export const DEFAULT_CONSOLE_LIMIT = 50;
+export const DEFAULT_CONSOLE_MAX_ENTRY_BYTES = 4_096;
+export const DEFAULT_CONSOLE_TOTAL_BYTES = 32_768;
+export const DEFAULT_NETWORK_LIMIT = 50;
+
+/**
+ * Assembled-envelope size ceilings, measured as JSON bytes with the screenshot
+ * data URL excluded (ADR 0004 D7). Over the soft ceiling: trim console then
+ * network, oldest first. Over the hard ceiling: refuse to send.
+ */
+export const PAYLOAD_SOFT_CEILING_BYTES = 512 * 1_024;
+export const PAYLOAD_HARD_CEILING_BYTES = 2 * 1_024 * 1_024;
+
+/**
+ * Query-string keys whose value is scrubbed from every captured URL and from
+ * `page.url` / `page.referrer` (ADR 0004 D5). The key is kept — its presence is
+ * signal; the value is the risk. User `redact.urlParams` extend this list.
+ */
+export const SENSITIVE_URL_PARAMS: readonly string[] = [
+  "token",
+  "access_token",
+  "refresh_token",
+  "id_token",
+  "key",
+  "api_key",
+  "apikey",
+  "secret",
+  "client_secret",
+  "password",
+  "pwd",
+  "auth",
+  "authorization",
+  "sig",
+  "signature",
+  "code",
+  "session",
+  "sid",
+];

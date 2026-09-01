@@ -65,6 +65,57 @@ const shot   = await tp.screenshot();    // Screenshot | null
 await tp.send({ description, target, screenshot: shot });
 ```
 
+## Diagnostics capture (opt-in)
+
+Off by default. Turn on console and/or network capture so a report carries what the app
+was *doing*, not just where the user was:
+
+```ts
+tracepoint({
+  webhook: "https://…",
+  console: true,                       // console.* + uncaught errors + unhandledrejection
+  network: true,                       // fetch + XHR — metadata only, never bodies/headers
+});
+
+// or tune them:
+tracepoint({
+  webhook: "https://…",
+  console: { levels: ["warn", "error"], limit: 100 },
+  network: { denyUrls: ["/analytics", /segment\.io/] },
+});
+```
+
+Both buffer continuously (so there's history from *before* the report) and are fully
+removed by `destroy()`. Enabling either prints a one-time notice of what's now collected.
+Nothing is sent until the user submits.
+
+### Redaction
+
+```ts
+tracepoint({
+  webhook: "https://…",
+  redact: {
+    selectors: [".secret"],            // blanked in the screenshot + descriptor
+    text: (s) => s.replace(/int-\d+/g, "«id»"),  // your scrub of console args + context
+    urlParams: ["tenant"],             // extra query keys to strip (added to the defaults)
+    pii: true,                         // preset: email / card (Luhn) / JWT / known tokens / phone
+  },
+});
+```
+
+`redact: ["…selectors…"]` (a bare array) still works. Sensitive query params
+(`token`, `access_token`, `secret`, …) are stripped from captured URLs and `page.url`
+regardless. Full list of guarantees: [`docs/07-privacy.html`](https://github.com/tracepoint-dev/tracepoint/blob/main/docs/07-privacy.html).
+
+### Fresh context at submit
+
+```ts
+tracepoint({
+  webhook: "https://…",
+  context: () => ({ route: currentRoute(), flags: featureFlags() }), // evaluated per report
+});
+```
+
 ## Script tag (no build)
 
 ```html
@@ -81,11 +132,13 @@ vs ~9.5 KB); the npm build loads the screenshot engine lazily on first use.
 
 ## The payload
 
-Each report is a single JSON object POSTed to your `webhook`: the description and
-annotations, the picked element's descriptor (selector, XPath, accessible name,
-attributes, bounding box, truncated outer HTML), page URL/route, an inline base64
-screenshot, and browser/environment info. Never captured: cookies, auth headers, tokens,
-or request/response bodies.
+Each report is a single JSON object POSTed to your `webhook` (schema `2.0`): the
+description and annotations, the picked element's descriptor (selector, XPath, accessible
+name, attributes, bounding box, truncated outer HTML, and — with `@tracepoint-dev/react` —
+`component`), page URL/route, an inline base64 screenshot, browser/environment info, your
+`context`, and — when opted in — `console`, `errors`, and `network`. A `capture` block
+says what was collected and what got trimmed. Never captured: cookies, auth headers,
+tokens, or request/response bodies.
 
 The full JSON Schema ships with the package:
 
@@ -98,7 +151,9 @@ import schema from "@tracepoint-dev/core/schema" with { type: "json" };
 - **It only sends a report when the user clicks submit.** Nothing goes out when the page
   loads, and nothing runs in the background.
 - **It never reads cookies, `localStorage`, login tokens, or the contents of your network
-  requests.**
+  requests.** `console` and `network` capture are opt-in; even then, network capture is
+  metadata only (method, URL, status, timing) and redaction runs before anything enters a
+  buffer. See [`docs/07-privacy.html`](https://github.com/tracepoint-dev/tracepoint/blob/main/docs/07-privacy.html).
 - **Before the screenshot, it blanks out password fields** (and restores them after).
   Anything you list in `redact` — plus credit-card fields and `.tp-redact` — is hidden from
   the screenshot too.

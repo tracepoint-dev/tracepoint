@@ -3,8 +3,9 @@
  * methods are the whole API; `open` / `close` warn and no-op (ADR 0002).
  */
 import { pickOnce } from "./capture/pick-once.js";
+import { createCollectors } from "./collect/index.js";
 import type { NormalizedConfig } from "./internal-types.js";
-import { pickTransport, runScreenshot, runSend } from "./pipeline.js";
+import { pickTransport, resolveContext, runScreenshot, runSend } from "./pipeline.js";
 import type { Transport } from "./transport/types.js";
 import type { TracepointHandle } from "./types.js";
 import { warnOnce } from "./util/logger.js";
@@ -35,6 +36,7 @@ function bareHighlight() {
 export function createHeadlessRuntime(config: NormalizedConfig): TracepointHandle {
   const context: Record<string, unknown> = { ...config.context };
   const transport: Transport = pickTransport(config.webhook);
+  const collectors = createCollectors(config);
 
   return {
     open: () => warnOnce("headless:open", "open() has no effect in headless mode (ui: false)"),
@@ -43,13 +45,20 @@ export function createHeadlessRuntime(config: NormalizedConfig): TracepointHandl
       Object.assign(context, patch);
     },
     destroy: () => {
-      /* headless mounts nothing persistent */
+      collectors.destroy();
     },
     pick: () => {
       const hl = bareHighlight();
       return pickOnce(hl.el, hl).finally(() => hl.el.remove());
     },
     screenshot: (opts) => runScreenshot(config.redact, opts),
-    send: (input) => runSend(input, context, transport),
+    send: (input) =>
+      runSend(
+        input,
+        resolveContext(config, context),
+        transport,
+        collectors.snapshot(),
+        config.redactUrlParams,
+      ),
   };
 }

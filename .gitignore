@@ -47,5 +47,9 @@ spike/**/tracepoint-spike-*.json
 /docs/
 /spike/
 
+# local MCP server config — spike-local for now; un-ignore when a real
+# committed MCP server ships (Phase 4b)
+/.mcp.json
+
 # demo receiver data
 examples/demo-app/.tracepoint/

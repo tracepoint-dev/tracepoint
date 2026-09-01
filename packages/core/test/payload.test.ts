@@ -10,7 +10,7 @@ function emptyDraft(): Draft {
 describe("assemblePayload", () => {
   it("produces the frozen envelope shape with required fields", () => {
     const p = assemblePayload({ ...emptyDraft(), description: "broken" }, {});
-    expect(p.tracepoint).toEqual({ schemaVersion: "1.0", sdkVersion: "0.0.0" });
+    expect(p.tracepoint).toEqual({ schemaVersion: "2.0", sdkVersion: "0.0.0" });
     expect(typeof p.id).toBe("string");
     expect(p.id.length).toBeGreaterThan(0);
     expect(new Date(p.createdAt).toISOString()).toBe(p.createdAt);
@@ -26,7 +26,42 @@ describe("assemblePayload", () => {
       "screenshot",
       "client",
       "context",
+      "console",
+      "errors",
+      "network",
+      "capture",
     ]);
+  });
+
+  it("defaults the Phase 2 fields to empty when no collector snapshot is given", () => {
+    const p = assemblePayload(emptyDraft(), {});
+    expect(p.console).toEqual([]);
+    expect(p.errors).toEqual([]);
+    expect(p.network).toEqual([]);
+    expect(p.capture).toEqual({ console: false, network: false, truncated: {} });
+  });
+
+  it("carries a collector snapshot through", () => {
+    const snapshot = {
+      console: [{ level: "warn" as const, message: "hmm", ts: 12 }],
+      errors: [],
+      network: [
+        {
+          method: "GET",
+          url: "https://api.test/x",
+          status: 500,
+          durationMs: 4,
+          ts: 20,
+          failed: true,
+        },
+      ],
+      enabled: { console: true, network: true },
+    };
+    const p = assemblePayload(emptyDraft(), {}, snapshot);
+    expect(p.console).toEqual(snapshot.console);
+    expect(p.console).not.toBe(snapshot.console);
+    expect(p.network[0]?.status).toBe(500);
+    expect(p.capture).toEqual({ console: true, network: true, truncated: {} });
   });
 
   it("copies annotations and context rather than sharing references", () => {
@@ -54,6 +89,19 @@ describe("assemblePayload", () => {
     const a = assemblePayload(emptyDraft(), {});
     const b = assemblePayload(emptyDraft(), {});
     expect(a.id).not.toBe(b.id);
+  });
+
+  it("scrubs sensitive query params from page.url", () => {
+    const original = location.href;
+    history.replaceState(null, "", "/app?token=sekret&page=2");
+    try {
+      const p = assemblePayload(emptyDraft(), {}, undefined, ["token"]);
+      expect(p.page.url).toContain("token=REDACTED");
+      expect(p.page.url).toContain("page=2");
+      expect(p.page.url).not.toContain("sekret");
+    } finally {
+      history.replaceState(null, "", original);
+    }
   });
 });
 

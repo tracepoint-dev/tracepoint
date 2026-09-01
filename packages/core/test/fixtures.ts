@@ -3,7 +3,7 @@ import type { Payload } from "../src/internal-types.js";
 /** A minimal, well-formed payload for tests that just need *a* payload. */
 export function makePayload(overrides: Partial<Payload> = {}): Payload {
   return {
-    tracepoint: { schemaVersion: "1.0", sdkVersion: "0.0.0" },
+    tracepoint: { schemaVersion: "2.0", sdkVersion: "0.0.0" },
     id: "test-id",
     createdAt: "2026-08-29T00:00:00.000Z",
     report: { description: "button does nothing", annotations: [] },
@@ -18,6 +18,10 @@ export function makePayload(overrides: Partial<Payload> = {}): Payload {
       timezone: "UTC",
     },
     context: {},
+    console: [],
+    errors: [],
+    network: [],
+    capture: { console: false, network: false, truncated: {} },
     ...overrides,
   };
 }

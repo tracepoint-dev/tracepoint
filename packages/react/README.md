@@ -30,10 +30,10 @@ function App() {
 
 - **`<Tracepoint {...config} />`** — every
   [`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core) config key
-  is a prop (`webhook`, `env`, `release`, `context`, `redact`, `ui`). Place it once near the
-  root. It calls `tracepoint()` in a browser-only effect (nothing runs during SSR), keeps
-  `context` in sync when that prop's contents change, and calls `destroy()` on unmount.
-  Renders nothing. Init-only props are read once on mount.
+  is a prop (`webhook`, `env`, `release`, `context`, `redact`, `console`, `network`, `ui`).
+  Place it once near the root. It calls `tracepoint()` in a browser-only effect (nothing
+  runs during SSR), keeps `context` in sync when that prop's contents change, and calls
+  `destroy()` on unmount. Renders nothing. Init-only props are read once on mount.
 - **`useTracepoint()`** → `TracepointHandle | null`. Reads the singleton and re-renders
   when it appears/disappears (via `useSyncExternalStore`). `null` before `<Tracepoint>`
   mounts and during SSR. Use it to open the reporter from your own UI:
@@ -47,6 +47,19 @@ function App() {
 
 The adapter is deliberately thin — lifecycle, SSR safety, prop reactivity only. All
 capture logic lives in core.
+
+### Component / source mapping
+
+While mounted, the adapter registers a descriptor contributor with core that reads the
+**React component** for the picked DOM node off the fiber. Reports then carry
+`target.component` — `{ name, stack, source }` — so an agent can jump from "the user
+pointed here" to the component file. `name` / `stack` are reliable in dev, best-effort in
+production (minifiers mangle names that aren't set via `displayName`). `source` (the
+file:line) is read once, when the component first mounts — it can go **stale, not just
+absent**, if the file changes afterwards (a later edit, or simply time passing between
+when the report was filed and when someone looks at it). Treat it as a hint to verify
+against `name`/`text`, not a coordinate to jump to blindly. Falls back to `null` silently
+when nothing resolves.
 
 ## Security
 

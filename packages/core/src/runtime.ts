@@ -7,9 +7,11 @@ import { drawSelectionRect } from "./annotate/selection-rect.js";
 import { buildDescriptor } from "./capture/descriptor.js";
 import { pickOnce } from "./capture/pick-once.js";
 import { createPicker } from "./capture/picker.js";
+import { createCollectors } from "./collect/index.js";
 import type { Draft, NormalizedConfig } from "./internal-types.js";
 import { assemblePayload } from "./payload/assemble.js";
-import { pickTransport, runScreenshot, runSend } from "./pipeline.js";
+import { enforceSize } from "./payload/size.js";
+import { pickTransport, resolveContext, runScreenshot, runSend } from "./pipeline.js";
 import { withRedaction } from "./privacy/redact.js";
 import { captureScreenshot } from "./screenshot/capture.js";
 import { createMachine } from "./state/machine.js";
@@ -31,6 +33,7 @@ const emptyDraft = (): Draft => ({
 export function createRuntime(config: NormalizedConfig): TracepointHandle {
   const context: Record<string, unknown> = { ...config.context };
   const transport: Transport = pickTransport(config.webhook);
+  const collectors = createCollectors(config);
 
   let draft = emptyDraft();
   let capturing = false;
@@ -112,7 +115,17 @@ export function createRuntime(config: NormalizedConfig): TracepointHandle {
   }
 
   async function doSubmit(): Promise<void> {
-    const result = await transport.submit(assemblePayload(draft, context));
+    const { payload, oversize } = enforceSize(
+      assemblePayload(
+        draft,
+        resolveContext(config, context),
+        collectors.snapshot(),
+        config.redactUrlParams,
+      ),
+    );
+    const result = oversize
+      ? ({ ok: false, error: "payload too large" } as const)
+      : await transport.submit(payload);
     if (result.ok) {
       machine.dispatch({ type: "SUBMIT_OK" });
     } else {
@@ -164,10 +177,18 @@ export function createRuntime(config: NormalizedConfig): TracepointHandle {
       picker.stop();
       hideHint();
       unbindTrigger?.();
+      collectors.destroy();
       shell.destroy();
     },
     pick: () => pickOnce(shell.host, highlight),
     screenshot: (opts) => runScreenshot(config.redact, opts),
-    send: (input) => runSend(input, context, transport),
+    send: (input) =>
+      runSend(
+        input,
+        resolveContext(config, context),
+        transport,
+        collectors.snapshot(),
+        config.redactUrlParams,
+      ),
   };
 }

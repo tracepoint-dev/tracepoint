@@ -21,6 +21,20 @@ export type Annotation = SelectionRectAnnotation;
 
 export type SelectorConfidence = "semantic" | "positional";
 
+/**
+ * Component / source info for the picked element, contributed by a framework
+ * adapter (see {@link registerDescriptorContributor}). `null` when no adapter
+ * matched — distinct from "looked, found nothing".
+ */
+export interface DescriptorComponentInfo {
+  /** `displayName`, else a non-trivial function/class `.name`, else `null`. */
+  name: string | null;
+  /** Nearest → farthest named component ancestors. Capped. */
+  stack: string[];
+  /** Best-effort source location. Usually only present in dev builds. */
+  source: { file: string; line: number } | null;
+}
+
 /** Everything captured about the picked element. */
 export interface DescriptorBundle {
   primarySelector: string;
@@ -42,6 +56,8 @@ export interface DescriptorBundle {
   boundingRect: Rect;
   ancestors: string[];
   outerHtml: string;
+  /** Filled by a framework adapter's contributor; `null` otherwise. */
+  component: DescriptorComponentInfo | null;
 }
 
 export interface Screenshot {
@@ -86,6 +102,43 @@ export interface Labels {
   success: string;
 }
 
+// ---------------------------------------------------------------- capture (Phase 2)
+
+export type ConsoleLevel = "log" | "info" | "warn" | "error" | "debug";
+
+/** Opt-in console + uncaught-error capture. `true` uses every default. */
+export interface ConsoleCaptureConfig {
+  /** Levels to keep. Default: all of them. */
+  levels?: ConsoleLevel[];
+  /** Max entries retained (drop-oldest). Default 50. */
+  limit?: number;
+  /** Max serialized bytes per entry before it is clipped. Default 4096. */
+  maxEntryBytes?: number;
+}
+
+/** Opt-in network capture. Metadata only — never bodies or headers. */
+export interface NetworkCaptureConfig {
+  /** Max entries retained (drop-oldest). Default 50. */
+  limit?: number;
+  /** URLs matching any of these are never recorded. */
+  denyUrls?: (string | RegExp)[];
+}
+
+/**
+ * Redaction config. The bare `string[]` form is still accepted and is treated as
+ * `{ selectors }`.
+ */
+export interface RedactConfig {
+  /** CSS selectors whose matched elements are blanked in screenshots + descriptor text. */
+  selectors?: string[];
+  /** Applied to captured console args and app-context string values. */
+  text?: (value: string) => string;
+  /** Extra query-string keys to scrub from captured URLs (added to the built-in list). */
+  urlParams?: string[];
+  /** Enable the built-in PII pattern preset (email / card / token / phone). */
+  pii?: boolean;
+}
+
 export interface UiConfig {
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   theme?: ThemeConfig;
@@ -103,9 +156,17 @@ export interface TracepointConfig {
   webhook: string;
   env?: string;
   release?: string;
-  context?: Record<string, unknown>;
-  /** CSS selectors whose matched elements are blanked in screenshots. */
-  redact?: string[];
+  /**
+   * Extra key/values sent with every report. An object is used as-is; a function
+   * is called at submit time so values stay fresh.
+   */
+  context?: Record<string, unknown> | (() => Record<string, unknown>);
+  /** CSS selectors to blank in screenshots, or a full {@link RedactConfig}. */
+  redact?: string[] | RedactConfig;
+  /** Opt in to console + uncaught-error capture. Off by default. */
+  console?: boolean | ConsoleCaptureConfig;
+  /** Opt in to network (fetch + XHR) metadata capture. Off by default. */
+  network?: boolean | NetworkCaptureConfig;
   /** Omit for the default UI · `false` for headless · an object to customize. */
   ui?: false | UiConfig;
 }

@@ -1,17 +1,29 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://tracepoint.dev/schema/1.0/report.json",
+  "$id": "https://tracepoint.dev/schema/2.0/report.json",
   "title": "Tracepoint report envelope",
-  "description": "The JSON a Tracepoint SDK POSTs to a webhook. schemaVersion 1.0.",
+  "description": "The JSON a Tracepoint SDK POSTs to a webhook. schemaVersion 2.0 — additive over 1.0: console / errors / network / capture and target.component.",
   "type": "object",
-  "required": ["tracepoint", "id", "createdAt", "report", "page", "client", "context"],
+  "required": [
+    "tracepoint",
+    "id",
+    "createdAt",
+    "report",
+    "page",
+    "client",
+    "context",
+    "console",
+    "errors",
+    "network",
+    "capture"
+  ],
   "additionalProperties": true,
   "properties": {
     "tracepoint": {
       "type": "object",
       "required": ["schemaVersion", "sdkVersion"],
       "properties": {
-        "schemaVersion": { "type": "string", "const": "1.0" },
+        "schemaVersion": { "type": "string", "const": "2.0" },
         "sdkVersion": { "type": "string" }
       }
     },
@@ -89,8 +101,74 @@
     },
     "context": {
       "type": "object",
-      "description": "App-supplied key/values. Empty in schemaVersion 1.0 unless set.",
+      "description": "App-supplied key/values. Redacted + size-capped. Empty unless the app sets it.",
       "additionalProperties": true
+    },
+    "console": {
+      "type": "array",
+      "description": "Console history. Empty unless `console` capture is opted in. Oldest-first.",
+      "items": {
+        "type": "object",
+        "required": ["level", "message", "ts"],
+        "properties": {
+          "level": { "type": "string", "enum": ["log", "info", "warn", "error", "debug"] },
+          "message": { "type": "string", "description": "Redacted, serialized args." },
+          "ts": { "type": "number", "description": "ms since performance.timeOrigin." },
+          "count": {
+            "type": "integer",
+            "description": "Present + >1 when consecutive duplicates collapsed."
+          }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "Uncaught errors + unhandled rejections. Rides with `console` capture.",
+      "items": {
+        "type": "object",
+        "required": ["name", "message", "stack", "ts", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "message": { "type": "string" },
+          "stack": { "type": "string", "description": "Query strings scrubbed from frame URLs." },
+          "ts": { "type": "number" },
+          "kind": { "type": "string", "enum": ["error", "rejection"] }
+        }
+      }
+    },
+    "network": {
+      "type": "array",
+      "description": "Request metadata only — never bodies or headers. Empty unless `network` capture is opted in.",
+      "items": {
+        "type": "object",
+        "required": ["method", "url", "status", "durationMs", "ts"],
+        "properties": {
+          "method": { "type": "string" },
+          "url": { "type": "string", "description": "Sensitive query params scrubbed." },
+          "status": { "type": ["integer", "null"], "description": "null on a network failure." },
+          "durationMs": { "type": "number" },
+          "reqBytes": { "type": "integer" },
+          "resBytes": { "type": "integer", "description": "From Content-Length, when present." },
+          "ts": { "type": "number" },
+          "failed": { "type": "boolean" }
+        }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "description": "What was collected and what was trimmed, so a consumer knows what to trust.",
+      "required": ["console", "network", "truncated"],
+      "properties": {
+        "console": { "type": "boolean" },
+        "network": { "type": "boolean" },
+        "truncated": {
+          "type": "object",
+          "properties": {
+            "console": { "type": "integer" },
+            "network": { "type": "integer" }
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -137,7 +215,34 @@
         },
         "boundingRect": { "$ref": "#/$defs/rect" },
         "ancestors": { "type": "array", "items": { "type": "string" } },
-        "outerHtml": { "type": "string" }
+        "outerHtml": { "type": "string" },
+        "component": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "description": "Component / source info from a framework adapter. null when none matched.",
+              "required": ["name", "stack", "source"],
+              "properties": {
+                "name": { "type": ["string", "null"] },
+                "stack": { "type": "array", "items": { "type": "string" } },
+                "source": {
+                  "oneOf": [
+                    { "type": "null" },
+                    {
+                      "type": "object",
+                      "required": ["file", "line"],
+                      "properties": {
+                        "file": { "type": "string" },
+                        "line": { "type": "integer" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
       }
     }
   }

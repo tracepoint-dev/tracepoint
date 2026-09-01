@@ -13,10 +13,10 @@ test("headless: custom UI drives pick → screenshot → send, lands in the dash
   await page.getByTestId("sample-action").click();
 
   await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/__tp/ingest") && r.status() === 201),
+    page.waitForResponse((r) => r.url().includes("/tracepoint/ingest") && r.status() === 201),
     expect(page.getByTestId("headless-status")).toHaveText("sent"),
   ]);
 
-  await page.goto("/__tp");
+  await page.goto("/tracepoint");
   await expect(page.getByRole("link", { name: "headless report" })).toBeVisible();
 });

@@ -1,5 +1,11 @@
-import { type TracepointConfig, type TracepointHandle, tracepoint } from "@tracepoint-dev/core";
+import {
+  type TracepointConfig,
+  type TracepointHandle,
+  registerDescriptorContributor,
+  tracepoint,
+} from "@tracepoint-dev/core";
 import { useEffect, useRef } from "react";
+import { readFiberComponent } from "./fiber-source.js";
 
 /** Props for `<Tracepoint>` — the full `TracepointConfig`, passed declaratively. */
 export type TracepointProps = TracepointConfig;
@@ -19,18 +25,25 @@ export function Tracepoint(props: TracepointProps): null {
 
   useEffect(() => {
     handleRef.current = tracepoint({ ...propsRef.current });
+    // Teach core how to read a React component off a picked DOM node.
+    const unregister = registerDescriptorContributor(readFiberComponent);
     return () => {
+      unregister();
       handleRef.current?.destroy();
       handleRef.current = null;
     };
   }, []);
 
   // Re-sync context only when its *contents* change — React hands us a new object
-  // literal on most renders, so the stringified value is the real trigger.
-  const contextKey = JSON.stringify(props.context ?? {});
+  // literal on most renders, so the stringified value is the real trigger. The
+  // function form of `context` is owned by core (evaluated at submit), not here.
+  const contextKey = JSON.stringify(
+    typeof props.context === "function" ? "__fn__" : (props.context ?? {}),
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: contextKey proxies props.context
   useEffect(() => {
-    handleRef.current?.setContext(propsRef.current.context ?? {});
+    const ctx = propsRef.current.context;
+    if (typeof ctx !== "function") handleRef.current?.setContext(ctx ?? {});
   }, [contextKey]);
 
   return null;
