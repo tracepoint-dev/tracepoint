@@ -173,8 +173,34 @@ queue; the `Pending / Approved / Rejected / All` tabs (or `?status=`) switch vie
 Rejected reports stay stored (audit / dedup); only Delete removes them.
 
 Programmatically it's `store.setStatus(id, "approved" | "rejected" | "pending")` and
-`store.list({ status })`. This is the gate the Phase 4 MCP reads through — it will only
-ever expose `approved` reports to an agent.
+`store.list({ status })`. This is the gate the MCP endpoint reads through (below).
+
+## MCP endpoint (for coding agents)
+
+`mcp: true` serves a **read-only** [MCP](https://modelcontextprotocol.io) endpoint at
+`{basePath}/mcp` so an agent (Claude Code, Cursor, …) can pull reports and act on them.
+
+```ts
+createReceiver({ store, mcp: true, auth /* guards it too */ });
+```
+
+- Needs `@modelcontextprotocol/sdk` and `zod` installed — they're **optional peers**, so
+  `npm i @tracepoint-dev/webhook-kit` alone never pulls them, and nothing MCP is loaded
+  until the first `/mcp` request.
+- Transport is MCP **Streamable HTTP, stateless** — one JSON response per request, no
+  session state, so it works on serverless. Point the harness at
+  `https://your-host{basePath}/mcp`.
+- Tools: `list_reports` (summaries) · `get_report(id)` (full schema-2.0 envelope) ·
+  `get_screenshot(id)` (PNG). Resource: `tracepoint://guide` (how to read a report).
+- **Only `approved` reports are exposed** — `get_report` refuses any other id — and there
+  is **no tool to change a status**. Approval stays a human action in the dashboard.
+
+Mount it yourself against any store without the receiver:
+
+```ts
+import { mcpHandler } from "@tracepoint-dev/webhook-kit/mcp";
+const handler = mcpHandler(store); // (Request) => Promise<Response>
+```
 
 ## Choosing a store
 
@@ -237,8 +263,9 @@ retention: { maxAge: "90d", maxCount: 5000 }
 ## Auth
 
 `auth` is a function given the incoming `Request`; return `false` (or throw) to deny with
-`401`. It guards the dashboard and the delete / clear routes. **It does not guard
-`/ingest`** — reports come from anonymous browsers, so that endpoint stays open by design.
+`401`. It guards the dashboard, the `/mcp` endpoint, and the status / delete / clear
+routes. **It does not guard `/ingest`** — reports come from anonymous browsers, so that
+endpoint stays open by design.
 
 ```ts
 auth: (req) => req.headers.get("authorization") === `Bearer ${process.env.TP_DASH_TOKEN}`
@@ -255,6 +282,7 @@ All relative to `basePath` (default `/tracepoint`).
 | Method & path | What | Auth |
 | --- | --- | --- |
 | `POST /ingest` | SDK posts a report → `201 { ok, id }` | open |
+| `POST /mcp` | MCP Streamable HTTP endpoint (only when `mcp: true`) | guarded |
 | `GET /` | dashboard — report list (`?status=pending\|approved\|rejected\|all`, default `pending`) | guarded |
 | `GET /reports/:id` | dashboard — one report | guarded |
 | `GET /reports/:id/screenshot` | the PNG bytes | guarded |

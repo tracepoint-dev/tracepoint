@@ -12,6 +12,7 @@ function tracepointReceiver(): Plugin {
   const receiver = createReceiver({
     store: jsonFileStore({ dir: fileURLToPath(new URL(".tracepoint", import.meta.url)) }),
     dashboard: true,
+    mcp: true,
     basePath: "/tracepoint",
   });
   const handle = nodeHandler(receiver);

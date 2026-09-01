@@ -91,7 +91,13 @@ export interface ReceiverOptions {
   handlers?: Handler[];
   retention?: RetentionOptions;
   dashboard?: boolean;
-  /** Guard for the dashboard + mutation routes. Return false (or throw) to deny. */
+  /**
+   * Serve a read-only MCP (Streamable HTTP) endpoint at `{basePath}/mcp` for
+   * agent tools. Exposes `approved` reports only. Needs `@modelcontextprotocol/sdk`
+   * + `zod` installed (optional peers). Guarded by `auth`.
+   */
+  mcp?: boolean;
+  /** Guard for the dashboard, the MCP endpoint, and the mutation routes. Return false (or throw) to deny. */
   auth?: (request: Request) => boolean | Promise<boolean>;
   /** Mount prefix, for building links. Default `"/tracepoint"`. */
   basePath?: string;
