@@ -35,6 +35,10 @@ tp.destroy();
 `webhook` is the one required option. With no webhook the report is logged to the console
 (and offered as a JSON download) so you can see the payload immediately.
 
+To also capture what the app was *doing* — console output, uncaught errors, failed
+requests — opt in with `console: true` / `network: true`. Off by default; see
+[Diagnostics capture](#diagnostics-capture-opt-in) below.
+
 ## Customizing the UI
 
 All presentation lives under `ui` — omit it for the default look, pass `false` for

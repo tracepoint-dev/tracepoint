@@ -4,8 +4,9 @@ The receiver side of [Tracepoint](https://github.com/tracepoint-dev/tracepoint).
 in the browser POSTs each report somewhere — this is that somewhere. It's a small library
 you mount **inside a server you already run**: it stores reports from
 [`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core), gives you a
-dashboard to read them, and can forward them on to other tools. No hosted service, no
-account, no database required to start.
+dashboard to triage them (approve / reject), can forward them on to other tools, and can
+expose the approved ones to a coding agent over a read-only [MCP](https://modelcontextprotocol.io)
+endpoint. No hosted service, no account, no database required to start.
 
 ## The mental model
 
@@ -17,7 +18,8 @@ Three moving parts. You already have the first and third — webhook-kit is the 
   @tracepoint-dev/core  -POST->  createReceiver({ store })  ->  a store
   (button -> pick ->             mounted at /tracepoint          (files or SQLite)
    screenshot ->                       |
-   describe -> submit)                 |-> dashboard  at /tracepoint
+   describe -> submit)                 |-> dashboard  at /tracepoint      (triage)
+                                       |-> MCP        at /tracepoint/mcp  (agents; opt-in)
                                        |
                                        `-> handlers  (optional)
                                             e.g. discord(webhookUrl)
