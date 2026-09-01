@@ -6,6 +6,7 @@ export default defineConfig({
     "src/stores/index.ts",
     "src/connectors/index.ts",
     "src/dashboard/index.ts",
+    "src/mcp/index.ts",
     "src/express.ts",
     "src/node-http.ts",
   ],
@@ -14,6 +15,6 @@ export default defineConfig({
   clean: true,
   sourcemap: false,
   treeshake: true,
-  // better-sqlite3 is an optional peer — never bundle it
-  external: ["better-sqlite3", "node:sqlite"],
+  // optional peers — never bundle them
+  external: ["better-sqlite3", "node:sqlite", "@modelcontextprotocol/sdk", "zod"],
 });

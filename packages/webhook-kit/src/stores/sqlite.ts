@@ -1,5 +1,5 @@
 import { type Db, openSqlite } from "../internal/sqlite-driver.js";
-import type { ListOptions, Store, StoredReport } from "../types.js";
+import type { ListOptions, ReportStatus, Store, StoredReport } from "../types.js";
 import { makeId, summarize } from "./ids.js";
 
 export interface SqliteStoreOptions {
@@ -7,11 +7,12 @@ export interface SqliteStoreOptions {
   file: string;
 }
 
-const SCHEMA = `
+const TABLES = `
 CREATE TABLE IF NOT EXISTS reports (
   id          TEXT PRIMARY KEY,
   created_at  TEXT NOT NULL,
   received_at TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'pending',
   description TEXT NOT NULL DEFAULT '',
   route       TEXT,
   payload     TEXT NOT NULL,
@@ -24,13 +25,30 @@ CREATE TABLE IF NOT EXISTS screenshots (
   mime  TEXT NOT NULL,
   bytes BLOB NOT NULL
 );
-CREATE INDEX IF NOT EXISTS reports_created_at ON reports (created_at DESC);
 `;
+
+const INDEXES = `
+CREATE INDEX IF NOT EXISTS reports_created_at ON reports (created_at DESC);
+CREATE INDEX IF NOT EXISTS reports_status ON reports (status);
+`;
+
+/**
+ * Add `status` to a `reports` table created before the column existed. Runs
+ * after the tables exist but before the indexes, so the `reports_status` index
+ * always has a column to index.
+ */
+function migrateStatusColumn(db: Db): void {
+  const cols = db.prepare("PRAGMA table_info(reports)").all() as Array<{ name: string }>;
+  if (cols.length > 0 && !cols.some((c) => c.name === "status")) {
+    db.exec("ALTER TABLE reports ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
+  }
+}
 
 interface ReportRow {
   id: string;
   created_at: string;
   received_at: string;
+  status: string;
   payload: string;
   shot_mime: string | null;
   shot_w: number | null;
@@ -42,6 +60,7 @@ function toStoredReport(row: ReportRow): StoredReport {
     id: row.id,
     createdAt: row.created_at,
     receivedAt: row.received_at,
+    status: (row.status as ReportStatus) ?? "pending",
     payload: JSON.parse(row.payload) as Record<string, unknown>,
     screenshot: row.shot_mime
       ? { mimeType: row.shot_mime, width: row.shot_w ?? 0, height: row.shot_h ?? 0 }
@@ -60,7 +79,9 @@ export function sqliteStore(opts: SqliteStoreOptions): Store {
   return {
     async init() {
       db = await openSqlite(opts.file);
-      db.exec(SCHEMA);
+      db.exec(TABLES);
+      migrateStatusColumn(db);
+      db.exec(INDEXES);
     },
 
     async save({ payload, screenshot }) {
@@ -71,8 +92,8 @@ export function sqliteStore(opts: SqliteStoreOptions): Store {
 
       d.prepare(
         `INSERT INTO reports
-           (id, created_at, received_at, description, route, payload, shot_mime, shot_w, shot_h)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, created_at, received_at, status, description, route, payload, shot_mime, shot_w, shot_h)
+         VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
       ).run(
         id,
         createdAt,
@@ -102,6 +123,10 @@ export function sqliteStore(opts: SqliteStoreOptions): Store {
         where.push("created_at >= ?");
         params.push(opts.since.toISOString());
       }
+      if (opts.status) {
+        where.push("status = ?");
+        params.push(opts.status);
+      }
       if (opts.route) {
         where.push("route = ?");
         params.push(opts.route);
@@ -115,13 +140,14 @@ export function sqliteStore(opts: SqliteStoreOptions): Store {
 
       const rows = need()
         .prepare(
-          `SELECT id, created_at, description, route, shot_mime
+          `SELECT id, created_at, status, description, route, shot_mime
              FROM reports ${clause}
              ORDER BY created_at DESC LIMIT ?`,
         )
         .all(...params, limit) as Array<{
         id: string;
         created_at: string;
+        status: string;
         description: string;
         route: string | null;
         shot_mime: string | null;
@@ -130,6 +156,7 @@ export function sqliteStore(opts: SqliteStoreOptions): Store {
       return rows.map((r) => ({
         id: r.id,
         createdAt: r.created_at,
+        status: (r.status as ReportStatus) ?? "pending",
         description: r.description,
         route: r.route,
         hasScreenshot: r.shot_mime != null,
@@ -141,6 +168,10 @@ export function sqliteStore(opts: SqliteStoreOptions): Store {
         | ReportRow
         | undefined;
       return row ? toStoredReport(row) : null;
+    },
+
+    async setStatus(id, status) {
+      need().prepare("UPDATE reports SET status = ? WHERE id = ?").run(status, id);
     },
 
     async readScreenshot(id) {

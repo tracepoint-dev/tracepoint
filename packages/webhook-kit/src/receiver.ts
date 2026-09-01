@@ -32,6 +32,19 @@ export function createReceiver(opts: ReceiverOptions): Receiver {
     return ready;
   }
 
+  // Lazy: `./mcp` (and `@modelcontextprotocol/sdk`) load only on the first /mcp hit.
+  let mcp: ((request: Request) => Promise<Response>) | null = null;
+  async function mcpFor(request: Request): Promise<Response> {
+    if (opts.auth && !(await opts.auth(request))) {
+      return new Response("unauthorized", { status: 401 });
+    }
+    if (!mcp) {
+      const mod = await import("./mcp/index.js");
+      mcp = mod.mcpHandler(opts.store);
+    }
+    return mcp(request);
+  }
+
   async function runChain(report: StoredReport): Promise<void> {
     const ctx = {
       logger,
@@ -86,6 +99,8 @@ export function createReceiver(opts: ReceiverOptions): Receiver {
       await ensureReady();
 
       if (request.method === "POST" && rel === "/ingest") return ingest(request);
+
+      if (opts.mcp && rel === "/mcp") return mcpFor(request);
 
       if (dashboard) {
         const res = await handleDashboard(dashboard, request.method, rel, request);

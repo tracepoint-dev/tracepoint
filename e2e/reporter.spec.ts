@@ -46,3 +46,33 @@ test("Esc cancels pick mode", async ({ page }) => {
   await expect(page.getByText("Click an element to report")).toBeHidden();
   await expect(page.getByRole("button", { name: "Report an issue" })).toBeVisible();
 });
+
+test("a submitted report starts pending and can be approved from the dashboard", async ({
+  page,
+}) => {
+  const note = `approve me ${Date.now()}`;
+  await page.goto("/");
+  await page.getByRole("button", { name: "Report an issue" }).click();
+  await page.getByTestId("sample-action").click();
+  await page.getByPlaceholder("Describe the issue…").fill(note);
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/tracepoint/ingest") && r.status() === 201),
+    page.getByRole("button", { name: "Send" }).click(),
+  ]);
+
+  // default dashboard view is the pending queue — the report is there
+  await page.goto("/tracepoint");
+  await expect(page.getByRole("link", { name: note })).toBeVisible();
+
+  // approve it from the detail page
+  await page.getByRole("link", { name: note }).click();
+  await expect(page.locator(".badge")).toHaveText("pending");
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.locator(".badge")).toHaveText("approved");
+
+  // now it's gone from Pending and present under Approved
+  await page.goto("/tracepoint?status=pending");
+  await expect(page.getByRole("link", { name: note })).toHaveCount(0);
+  await page.goto("/tracepoint?status=approved");
+  await expect(page.getByRole("link", { name: note })).toBeVisible();
+});

@@ -4,8 +4,9 @@ The receiver side of [Tracepoint](https://github.com/tracepoint-dev/tracepoint).
 in the browser POSTs each report somewhere — this is that somewhere. It's a small library
 you mount **inside a server you already run**: it stores reports from
 [`@tracepoint-dev/core`](https://www.npmjs.com/package/@tracepoint-dev/core), gives you a
-dashboard to read them, and can forward them on to other tools. No hosted service, no
-account, no database required to start.
+dashboard to triage them (approve / reject), can forward them on to other tools, and can
+expose the approved ones to a coding agent over a read-only [MCP](https://modelcontextprotocol.io)
+endpoint. No hosted service, no account, no database required to start.
 
 ## The mental model
 
@@ -17,7 +18,8 @@ Three moving parts. You already have the first and third — webhook-kit is the 
   @tracepoint-dev/core  -POST->  createReceiver({ store })  ->  a store
   (button -> pick ->             mounted at /tracepoint          (files or SQLite)
    screenshot ->                       |
-   describe -> submit)                 |-> dashboard  at /tracepoint
+   describe -> submit)                 |-> dashboard  at /tracepoint      (triage)
+                                       |-> MCP        at /tracepoint/mcp  (agents; opt-in)
                                        |
                                        `-> handlers  (optional)
                                             e.g. discord(webhookUrl)
@@ -165,6 +167,43 @@ delete, and clear-all. Server-rendered HTML, no build step, no client JS.
 The `jsonFileStore` also writes `<dir>/reports/<id>.json` (the report) plus `<id>.png`
 (the screenshot) — greppable, diffable, easy to back up.
 
+## Triage: approve / reject
+
+Every report lands as **`pending`**. From a report's detail page a reviewer can **Approve**,
+**Reject**, or reset it to pending — re-clicking flips it. The list defaults to the pending
+queue; the `Pending / Approved / Rejected / All` tabs (or `?status=`) switch views.
+Rejected reports stay stored (audit / dedup); only Delete removes them.
+
+Programmatically it's `store.setStatus(id, "approved" | "rejected" | "pending")` and
+`store.list({ status })`. This is the gate the MCP endpoint reads through (below).
+
+## MCP endpoint (for coding agents)
+
+`mcp: true` serves a **read-only** [MCP](https://modelcontextprotocol.io) endpoint at
+`{basePath}/mcp` so an agent (Claude Code, Cursor, …) can pull reports and act on them.
+
+```ts
+createReceiver({ store, mcp: true, auth /* guards it too */ });
+```
+
+- Needs `@modelcontextprotocol/sdk` and `zod` installed — they're **optional peers**, so
+  `npm i @tracepoint-dev/webhook-kit` alone never pulls them, and nothing MCP is loaded
+  until the first `/mcp` request.
+- Transport is MCP **Streamable HTTP, stateless** — one JSON response per request, no
+  session state, so it works on serverless. Point the harness at
+  `https://your-host{basePath}/mcp`.
+- Tools: `list_reports` (summaries) · `get_report(id)` (full schema-2.0 envelope) ·
+  `get_screenshot(id)` (PNG). Resource: `tracepoint://guide` (how to read a report).
+- **Only `approved` reports are exposed** — `get_report` refuses any other id — and there
+  is **no tool to change a status**. Approval stays a human action in the dashboard.
+
+Mount it yourself against any store without the receiver:
+
+```ts
+import { mcpHandler } from "@tracepoint-dev/webhook-kit/mcp";
+const handler = mcpHandler(store); // (Request) => Promise<Response>
+```
+
 ## Choosing a store
 
 | Store | Import | Needs | Use when |
@@ -179,8 +218,8 @@ const store = sqliteStore({ file: "./tracepoint.db" }); // or ":memory:"
 
 The search / route-filter inputs appear in the dashboard only when the store supports them
 (`store.capabilities`) — SQLite does, the file store doesn't. A custom store is any object
-implementing the `Store` interface (`init / save / list / get / readScreenshot / delete /
-clear`); Postgres and libSQL adapters are on the roadmap.
+implementing the `Store` interface (`init / save / list / get / setStatus / readScreenshot /
+delete / clear`); Postgres and libSQL adapters are on the roadmap.
 
 **Already have reports in a database?** `createDashboard({ store })` from
 `@tracepoint-dev/webhook-kit/dashboard` mounts just the read UI against any store, without
@@ -226,8 +265,9 @@ retention: { maxAge: "90d", maxCount: 5000 }
 ## Auth
 
 `auth` is a function given the incoming `Request`; return `false` (or throw) to deny with
-`401`. It guards the dashboard and the delete / clear routes. **It does not guard
-`/ingest`** — reports come from anonymous browsers, so that endpoint stays open by design.
+`401`. It guards the dashboard, the `/mcp` endpoint, and the status / delete / clear
+routes. **It does not guard `/ingest`** — reports come from anonymous browsers, so that
+endpoint stays open by design.
 
 ```ts
 auth: (req) => req.headers.get("authorization") === `Bearer ${process.env.TP_DASH_TOKEN}`
@@ -244,9 +284,11 @@ All relative to `basePath` (default `/tracepoint`).
 | Method & path | What | Auth |
 | --- | --- | --- |
 | `POST /ingest` | SDK posts a report → `201 { ok, id }` | open |
-| `GET /` | dashboard — report list | guarded |
+| `POST /mcp` | MCP Streamable HTTP endpoint (only when `mcp: true`) | guarded |
+| `GET /` | dashboard — report list (`?status=pending\|approved\|rejected\|all`, default `pending`) | guarded |
 | `GET /reports/:id` | dashboard — one report | guarded |
 | `GET /reports/:id/screenshot` | the PNG bytes | guarded |
+| `POST /reports/:id/status` | set triage state — body `status=approved\|rejected\|pending` | guarded |
 | `POST /reports/:id/delete` | delete one report | guarded |
 | `POST /clear` | delete all reports | guarded |
 

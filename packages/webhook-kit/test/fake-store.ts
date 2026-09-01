@@ -26,6 +26,7 @@ export function fakeStore(): FakeStore {
           id,
           createdAt: (payload.createdAt as string) ?? now,
           receivedAt: now,
+          status: "pending",
           payload,
           screenshot: screenshot
             ? { mimeType: screenshot.mimeType, width: screenshot.width, height: screenshot.height }
@@ -39,11 +40,16 @@ export function fakeStore(): FakeStore {
       let items = [...rows.values()].map(({ report }) => report);
       items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       if (opts?.since) items = items.filter((r) => new Date(r.createdAt) >= opts.since!);
+      if (opts?.status) items = items.filter((r) => r.status === opts.status);
       if (opts?.limit) items = items.slice(0, opts.limit);
       return items.map(summaryOf);
     },
     async get(id: string) {
       return rows.get(id)?.report ?? null;
+    },
+    async setStatus(id: string, status) {
+      const row = rows.get(id);
+      if (row) row.report.status = status;
     },
     async readScreenshot(id: string) {
       const row = rows.get(id);
@@ -74,6 +80,7 @@ function summaryOf(r: StoredReport): ReportSummary {
   return {
     id: r.id,
     createdAt: r.createdAt,
+    status: r.status,
     description: report.description ?? "",
     route: page.route ?? null,
     hasScreenshot: r.screenshot != null,

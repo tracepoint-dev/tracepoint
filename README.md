@@ -3,11 +3,13 @@
 Open-source, developer-first feedback & diagnostics SDK for web apps. Someone using a
 running app reports an issue in place — floating button, pick an element, screenshot,
 annotate, describe — and Tracepoint attaches the technical context around it: URL/route,
-DOM node, browser/env, screenshot, and (later) console + network. Feedback flows to your
-existing tools via webhook — Tracepoint feeds them, it doesn't replace them.
+DOM node, browser/env, screenshot, and — opt-in — console + network + the React component
+the element came from. Feedback flows to your existing tools via webhook — Tracepoint
+feeds them, it doesn't replace them.
 
-**Status:** early. On npm — capture SDK, React adapter, and a self-hostable receiver.
-Console + network capture is next.
+**Status:** early, but usable. On npm — capture SDK (report schema `2.0`), React adapter,
+and a self-hostable receiver with a triage dashboard and a read-only MCP endpoint for
+coding agents.
 
 ## Packages
 
@@ -15,7 +17,7 @@ Console + network capture is next.
 | --- | --- | --- |
 | `@tracepoint-dev/core` | Framework-agnostic capture SDK | [npm](https://www.npmjs.com/package/@tracepoint-dev/core) · [readme](./packages/core) |
 | `@tracepoint-dev/react` | React adapter (thin wrapper over core) | [npm](https://www.npmjs.com/package/@tracepoint-dev/react) · [readme](./packages/react) |
-| `@tracepoint-dev/webhook-kit` | Mountable receiver — store, dashboard, outbound chain | [npm](https://www.npmjs.com/package/@tracepoint-dev/webhook-kit) · [readme](./packages/webhook-kit) |
+| `@tracepoint-dev/webhook-kit` | Mountable receiver — store, triage dashboard, outbound chain, MCP endpoint | [npm](https://www.npmjs.com/package/@tracepoint-dev/webhook-kit) · [readme](./packages/webhook-kit) |
 | `examples/demo-app` | Vite + React app for dogfooding and e2e | [src](./examples/demo-app) |
 
 ## Quick start
@@ -37,7 +39,12 @@ import { Tracepoint } from "@tracepoint-dev/react";
 ```
 
 Either one mounts the floating button; each report is structured JSON POSTed to your
-`webhook`.
+`webhook`. To capture what the app was *doing* — console, failed requests, uncaught
+errors — opt in:
+
+```ts
+tracepoint({ webhook: "…", console: true, network: true }); // off by default; see the core readme
+```
 
 **Receive the reports** — [`@tracepoint-dev/webhook-kit`](https://www.npmjs.com/package/@tracepoint-dev/webhook-kit),
 mounted in your own backend
@@ -49,13 +56,18 @@ import { mount } from "@tracepoint-dev/webhook-kit/express";
 
 const receiver = createReceiver({
   store: jsonFileStore({ dir: ".tracepoint" }),
-  dashboard: true,
+  dashboard: true, // triage: reports land as "pending", you approve/reject them
+  mcp: true,       // read-only MCP endpoint at /tracepoint/mcp — approved reports only
 });
 app.use("/tracepoint", mount(receiver)); // ingest at /tracepoint/ingest, dashboard at /tracepoint
 ```
 
 No backend to mount it in? Point `webhook` at any URL that accepts a POST (webhook.site,
 a serverless function, an existing endpoint) — the receiver is optional.
+
+**Point a coding agent at it** — with `mcp: true`, an agent (Claude Code, Cursor) can pull
+approved reports and act on them over MCP. `@modelcontextprotocol/sdk` + `zod` are optional
+peers; nothing MCP loads until the first `/mcp` request.
 
 ## Security
 

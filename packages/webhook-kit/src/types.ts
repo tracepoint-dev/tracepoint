@@ -14,11 +14,19 @@ export interface SaveInput {
   screenshot?: ScreenshotInput | null;
 }
 
+/**
+ * Triage state for a report (see PROJECT_CONTEXT §12e). New reports are
+ * `"pending"`; a human approves or rejects from the dashboard. The Phase 4b MCP
+ * only ever exposes `"approved"` reports.
+ */
+export type ReportStatus = "pending" | "approved" | "rejected";
+
 /** A report as stored. `payload` is the envelope; the screenshot is out-of-band. */
 export interface StoredReport {
   id: string;
   createdAt: string;
   receivedAt: string;
+  status: ReportStatus;
   payload: Record<string, unknown>;
   screenshot: { mimeType: string; width: number; height: number } | null;
 }
@@ -27,6 +35,7 @@ export interface StoredReport {
 export interface ReportSummary {
   id: string;
   createdAt: string;
+  status: ReportStatus;
   description: string;
   route: string | null;
   hasScreenshot: boolean;
@@ -37,6 +46,8 @@ export interface ListOptions {
   limit?: number;
   cursor?: string;
   since?: Date;
+  /** Baseline — honoured by every store. Omit for all statuses. */
+  status?: ReportStatus;
   /** Optional — SQL stores only (see {@link Store.capabilities}). */
   route?: string;
   search?: string;
@@ -48,6 +59,8 @@ export interface Store {
   save(input: SaveInput): Promise<{ id: string }>;
   list(opts?: ListOptions): Promise<ReportSummary[]>;
   get(id: string): Promise<StoredReport | null>;
+  /** Set a report's triage state. No-op if the id is unknown. */
+  setStatus(id: string, status: ReportStatus): Promise<void>;
   readScreenshot(id: string): Promise<{ mimeType: string; bytes: Uint8Array } | null>;
   delete(id: string): Promise<void>;
   /** Delete reports (optionally only those before a date). Returns the count removed. */
@@ -78,7 +91,13 @@ export interface ReceiverOptions {
   handlers?: Handler[];
   retention?: RetentionOptions;
   dashboard?: boolean;
-  /** Guard for the dashboard + mutation routes. Return false (or throw) to deny. */
+  /**
+   * Serve a read-only MCP (Streamable HTTP) endpoint at `{basePath}/mcp` for
+   * agent tools. Exposes `approved` reports only. Needs `@modelcontextprotocol/sdk`
+   * + `zod` installed (optional peers). Guarded by `auth`.
+   */
+  mcp?: boolean;
+  /** Guard for the dashboard, the MCP endpoint, and the mutation routes. Return false (or throw) to deny. */
   auth?: (request: Request) => boolean | Promise<boolean>;
   /** Mount prefix, for building links. Default `"/tracepoint"`. */
   basePath?: string;
